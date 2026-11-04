@@ -143,7 +143,7 @@ async def legacy_exec(ctx, *, script_code: str = None):
         await ctx.send("🔴 **DISCONNECTED**: Chưa kết nối WebSocket với Roblox! / No active Roblox client connected!")
 
 # ==============================================================================
-# ⚡ SLASH COMMANDS (Tính năng nâng cao, Tìm kiếm Rscripts/ScriptBlox, ESP, FPS Boost, Credits)
+# ⚡ SLASH COMMANDS (Tính năng nâng cao, Rscripts/ScriptBlox, ESP, FPS Boost, Credits)
 # ==============================================================================
 
 @bot.tree.command(name="inject", description="Kiểm tra trạng thái tiến trình và kết nối / Check process & connection status")
@@ -179,9 +179,6 @@ async def slash_exec(interaction: discord.Interaction, code: str):
 ])
 @is_debug_channel()
 async def slash_findscript(interaction: discord.Interaction, source: str, keyword: str):
-    keyword_lower = keyword.lower()
-    
-    # Dữ liệu mẫu hoặc tích hợp đường dẫn tra cứu nhanh từ Rscripts và ScriptBlox
     if source == "rscripts":
         search_url = f"https://rscripts.net/?q={keyword.replace(' ', '+')}"
         embed = discord.Embed(
@@ -190,7 +187,6 @@ async def slash_findscript(interaction: discord.Interaction, source: str, keywor
             color=0x9B59B6
         )
         embed.add_field(name="🔗 Link tra cứu trực tiếp", value=f"[Bấm vào đây để xem trên Rscripts]({search_url})", inline=False)
-        embed.add_field(name="💡 Gợi ý lệnh", value=f"Bạn có thể truy cập trang web trên để lấy loadstring và dùng lệnh `/exec` để chạy.", inline=False)
     else:
         search_url = f"https://scriptblox.com/search?q={keyword.replace(' ', '+')}"
         embed = discord.Embed(
@@ -199,9 +195,9 @@ async def slash_findscript(interaction: discord.Interaction, source: str, keywor
             color=0x3498DB
         )
         embed.add_field(name="🔗 Link tra cứu trực tiếp", value=f"[Bấm vào đây để xem trên ScriptBlox]({search_url})", inline=False)
-        embed.add_field(name="💡 Gợi ý lệnh", value=f"Bạn có thể truy cập trang web trên để lấy loadstring và dùng lệnh `/exec` để chạy.", inline=False)
         
-    embed.set_footer(text=fNguồn: {source.capitalize()} | Bot Automation System")
+    embed.add_field(name="💡 Gợi ý lệnh", value="Truy cập trang web trên để lấy loadstring và dùng lệnh `/exec` để chạy.", inline=False)
+    embed.set_footer(text=f"Nguồn: {source.capitalize()} | Bot Automation System")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @bot.tree.command(name="esp", description="Bật tính năng nhìn xuyên tường (ESP Box/Name) / Enable player ESP")
