@@ -6,8 +6,6 @@ Control a Roblox client from Discord. A Python bot receives slash commands in a 
 
 > **Disclaimer:** This is a test/educational project. Running scripts through third-party executors can violate the [Roblox Terms of Use](https://en.help.roblox.com/hc/en-us/articles/115004647846) and may get your account banned. Use it only on your own account, in your own experiences or private test places, and at your own risk. Never use it to disrupt other players.
 
-**Firstly, this is a test, so there will be many errors. Secondly, many commands will not work because they are created from Gemini+Claude. Finally, I took the idea from @vaehz to make it**
-
 ---
 
 ## How it works
@@ -42,6 +40,22 @@ git clone https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test.git
 cd RobloxOnDiscord-Test
 pip install discord.py websockets psutil
 ```
+
+## Creating a Discord bot
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and log in.
+2. Click **New Application**, name it, and accept the terms.
+3. Open the **Bot** tab on the left.
+4. Click **Reset Token** (or **Copy** if shown) and save the token somewhere safe. You will paste it into `bot.py`. Discord only shows it once.
+5. Still on the **Bot** tab, scroll to **Privileged Gateway Intents**. Slash commands don't need any, so leave them off unless you later change `bot.py` to read message content.
+6. Open **OAuth2 → URL Generator**:
+   - Under **Scopes**, tick `bot` and `applications.commands`.
+   - Under **Bot Permissions**, tick `View Channels`, `Send Messages`, `Embed Links` and `Attach Files`.
+7. Copy the generated URL at the bottom, open it in your browser, pick your server and click **Authorize**.
+8. In your server, create a text channel named `#debug`. Commands only work there.
+9. Optional: in Discord go to **Settings → Advanced** and turn on **Developer Mode**, so you can right-click the server or channel and copy its ID if you need it.
+
+Once the bot is invited, continue with the configuration below.
 
 ## Configuration
 
@@ -108,6 +122,11 @@ All commands are restricted to the `#debug` channel.
 - **`WebSocket` is nil in Roblox:** your executor doesn't support `WebSocket.connect`; try a different one.
 - **Python not recognized:** reinstall Python with **Add Python to PATH** checked.
 
+## Releases & Packages
+
+- [Releases](https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test/releases): tagged versions of the project (none published yet).
+- [Packages](https://github.com/users/giangveso0-ctrl/packages?repo_name=RobloxOnDiscord-Test): packages published from this repository (none published yet).
+
 ## Contributing
 
 Issues and pull requests are welcome. This is a small test project, so please keep changes focused.
@@ -127,8 +146,6 @@ No license has been specified yet. Add a `LICENSE` file (e.g. MIT) to let others
 Điều khiển client Roblox từ Discord. Một bot Python nhận slash command trong kênh Discord và chuyển mã Lua vào game thông qua kết nối WebSocket cục bộ.
 
 > **Lưu ý:** Đây là dự án thử nghiệm/học tập. Việc chạy script qua executor bên thứ ba có thể vi phạm [Điều khoản sử dụng của Roblox](https://en.help.roblox.com/hc/en-us/articles/115004647846) và có thể khiến tài khoản bị khóa. Chỉ sử dụng trên tài khoản của bạn, trong game của chính bạn hoặc place thử nghiệm riêng tư, và tự chịu rủi ro. Không dùng để gây ảnh hưởng đến người chơi khác.
-
-**Trước hết, đây là một bài kiểm thử, nên sẽ có nhiều lỗi. Thứ hai, nhiều lệnh sẽ không hoạt động vì chúng được tạo từ Gemini+Claude. Cuối cùng, tôi đã lấy ý tưởng từ @vaehz để làm nó**
 
 ---
 
@@ -164,6 +181,22 @@ git clone https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test.git
 cd RobloxOnDiscord-Test
 pip install discord.py websockets psutil
 ```
+
+## Cách tạo bot Discord
+
+1. Vào [Discord Developer Portal](https://discord.com/developers/applications) và đăng nhập.
+2. Nhấn **New Application**, đặt tên và đồng ý điều khoản.
+3. Mở tab **Bot** ở menu bên trái.
+4. Nhấn **Reset Token** (hoặc **Copy** nếu có) và lưu token ở nơi an toàn. Bạn sẽ dán token này vào `bot.py`. Discord chỉ hiển thị token một lần.
+5. Vẫn ở tab **Bot**, kéo xuống mục **Privileged Gateway Intents**. Slash command không cần intent nào, nên hãy để tắt trừ khi sau này bạn sửa `bot.py` để đọc nội dung tin nhắn.
+6. Mở **OAuth2 → URL Generator**:
+   - Ở mục **Scopes**, tích `bot` và `applications.commands`.
+   - Ở mục **Bot Permissions**, tích `View Channels`, `Send Messages`, `Embed Links` và `Attach Files`.
+7. Sao chép URL được tạo ở cuối trang, mở bằng trình duyệt, chọn server của bạn rồi nhấn **Authorize**.
+8. Trong server, tạo một kênh văn bản tên `#debug`. Các lệnh chỉ dùng được ở kênh này.
+9. Tùy chọn: vào **Settings → Advanced** trong Discord và bật **Developer Mode** để có thể nhấp chuột phải vào server hoặc kênh và sao chép ID khi cần.
+
+Sau khi mời bot vào server, tiếp tục với phần cấu hình bên dưới.
 
 ## Cấu hình
 
@@ -229,6 +262,11 @@ Tất cả lệnh chỉ dùng được trong kênh `#debug`.
 - **Không thấy slash command:** kiểm tra bot đã được mời với scope `applications.commands` và đợi Discord đồng bộ khoảng một phút.
 - **`WebSocket` là nil trong Roblox:** executor của bạn không hỗ trợ `WebSocket.connect`; hãy thử executor khác.
 - **Không nhận lệnh Python:** cài lại Python và tích chọn **Add Python to PATH**.
+
+## Bản phát hành & Gói (Releases & Packages)
+
+- [Releases](https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test/releases): các phiên bản đã gắn tag của dự án (chưa có bản nào được phát hành).
+- [Packages](https://github.com/users/giangveso0-ctrl/packages?repo_name=RobloxOnDiscord-Test): các gói được phát hành từ kho lưu trữ này (chưa có gói nào).
 
 ## Đóng góp
 
