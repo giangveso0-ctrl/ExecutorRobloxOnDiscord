@@ -1,6 +1,6 @@
 # RobloxOnDiscord-Test
 
-> **It's Videccode and takes the idea from @vaehz.** Thanks for downloading this project! It is a small test project, so expect rough edges. If you share or modify it, please keep these credits.
+> **It's Videcode and takes the idea from @vaehz.** Thanks for downloading this project! It is a small test project, so expect rough edges. If you share or modify it, please keep these credits.
 
 **English** | [Tiếng Việt](#tiếng-việt)
 
