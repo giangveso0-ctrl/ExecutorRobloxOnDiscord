@@ -1,5 +1,7 @@
 # RobloxOnDiscord-Test
 
+> **It's Videccode and takes the idea from @vaehz.** Thanks for downloading this project! It is a small test project, so expect rough edges. If you share or modify it, please keep these credits.
+
 **English** | [Tiếng Việt](#tiếng-việt)
 
 Control a Roblox client from Discord. A Python bot receives slash commands in a Discord channel and forwards Lua to the game through a local WebSocket connection.
@@ -115,6 +117,23 @@ All commands are restricted to the `#debug` channel.
 | `HipHeight` | `/human HipHeight 4` |
 | `Health` | `/human Health 50` |
 
+## AI features (planned)
+
+These features are **not implemented yet**. They are ideas for adding AI to the bot, kept here as a roadmap.
+
+| Idea | What it would do |
+| --- | --- |
+| `/ask <question>` | Answer Roblox and Lua questions directly in Discord using an AI model. |
+| `/explain` | Paste or upload a Lua script and get a plain-language explanation of what it does before you run it. |
+| `/script <prompt>` | Describe what you want in a sentence and get a Lua draft back as a code block. |
+| `/fix` | Send an error message from the game and get a suggested fix. |
+
+Design notes for whenever these get built:
+
+- **Never auto-run AI output.** Show the generated Lua in Discord first and require a button click (or an explicit `/exec`) to run it.
+- Keep the AI API key in an environment variable, not in `bot.py`.
+- Add a per-user cooldown to control cost and spam.
+
 ## Troubleshooting
 
 - **`/inject` shows DISCONNECTED:** make sure `bot.py` is running first, then execute `bridge.lua`. Check that nothing else is using port `8765` and that your firewall allows local connections.
@@ -126,6 +145,10 @@ All commands are restricted to the `#debug` channel.
 
 - [Releases](https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test/releases): tagged versions of the project (none published yet).
 - [Packages](https://github.com/users/giangveso0-ctrl/packages?repo_name=RobloxOnDiscord-Test): packages published from this repository (none published yet).
+
+## Downloader & Credits
+
+The downloader used by this project is called **Videccode**. The idea behind it comes from [@vaehz](https://github.com/vaehz), and full credit for the original concept goes to them. Videccode is a separate piece of the project from the Discord bot and the Lua bridge, so you can set it up on its own.
 
 ## Contributing
 
@@ -140,6 +163,8 @@ No license has been specified yet. Add a `LICENSE` file (e.g. MIT) to let others
 <a name="tiếng-việt"></a>
 
 # Tiếng Việt
+
+> **Đây là Videccode và lấy ý tưởng từ @vaehz.** Cảm ơn bạn đã tải dự án này! Đây là dự án thử nghiệm nhỏ nên có thể còn thiếu sót. Nếu bạn chia sẻ hoặc chỉnh sửa, vui lòng giữ lại phần ghi công này.
 
 [English](#robloxondiscord-test) | **Tiếng Việt**
 
@@ -256,6 +281,23 @@ Tất cả lệnh chỉ dùng được trong kênh `#debug`.
 | `HipHeight` | `/human HipHeight 4` |
 | `Health` | `/human Health 50` |
 
+## Tính năng AI (dự kiến)
+
+Các tính năng này **chưa được triển khai**. Đây là những ý tưởng để tích hợp AI vào bot, được ghi lại như một lộ trình.
+
+| Ý tưởng | Chức năng |
+| --- | --- |
+| `/ask <câu hỏi>` | Trả lời câu hỏi về Roblox và Lua ngay trong Discord bằng mô hình AI. |
+| `/explain` | Dán hoặc tải lên script Lua và nhận lời giải thích dễ hiểu về chức năng của nó trước khi chạy. |
+| `/script <mô tả>` | Mô tả điều bạn muốn bằng một câu và nhận bản nháp Lua trong khối mã. |
+| `/fix` | Gửi thông báo lỗi từ game và nhận gợi ý cách sửa. |
+
+Lưu ý thiết kế khi triển khai:
+
+- **Không tự động chạy mã do AI tạo.** Hiển thị mã Lua trong Discord trước và yêu cầu bấm nút (hoặc dùng `/exec` rõ ràng) để chạy.
+- Lưu khóa API của AI trong biến môi trường, không ghi trong `bot.py`.
+- Thêm thời gian chờ (cooldown) cho mỗi người dùng để kiểm soát chi phí và spam.
+
 ## Khắc phục sự cố
 
 - **`/inject` báo DISCONNECTED:** hãy chạy `bot.py` trước, sau đó mới chạy `bridge.lua`. Kiểm tra xem có chương trình nào khác đang dùng cổng `8765` và firewall có cho phép kết nối cục bộ không.
@@ -267,6 +309,10 @@ Tất cả lệnh chỉ dùng được trong kênh `#debug`.
 
 - [Releases](https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test/releases): các phiên bản đã gắn tag của dự án (chưa có bản nào được phát hành).
 - [Packages](https://github.com/users/giangveso0-ctrl/packages?repo_name=RobloxOnDiscord-Test): các gói được phát hành từ kho lưu trữ này (chưa có gói nào).
+
+## Trình tải & Ghi công
+
+Trình tải (downloader) được dùng trong dự án này có tên là **Videccode**. Ý tưởng của nó đến từ [@vaehz](https://github.com/vaehz), và toàn bộ công lao về ý tưởng gốc thuộc về họ. Videccode là một phần riêng biệt so với bot Discord và bridge Lua, nên bạn có thể thiết lập nó độc lập.
 
 ## Đóng góp
 
