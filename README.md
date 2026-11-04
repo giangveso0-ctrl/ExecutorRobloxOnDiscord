@@ -51,7 +51,7 @@ Discord (#debug)  ──►  bot.py (Python)  ──ws://localhost:8765──►
 Setup & How to Create a Discord Bot
 
         Create a Discord Bot:
-        Go to the Discord Developer Portal and click "New Application".
+        Go to the https://discord.com/developers/home and click "New Application".
         Navigate to the "Bot" tab on the left sidebar.
         Under "Privileged Gateway Intents", enable "Message Content Intent".
         Click Reset Token to generate your bot token.
@@ -173,7 +173,7 @@ Discord (#debug)  ──►  bot.py (Python)  ──ws://localhost:8765──►
 Thiết lập & Hướng dẫn tạo Bot Discord
 
     Cách tạo Bot Discord:
-        Truy cập Discord Developer Portal và bấm "New Application".
+        Truy cập https://discord.com/developers/home và bấm "New Application".
         Vào mục "Bot" ở menu bên trái.
         Tại phần "Privileged Gateway Intents", bật tùy chọn "Message Content Intent".
         Bấm Reset Token để lấy mã token của bot.
