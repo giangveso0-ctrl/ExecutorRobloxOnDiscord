@@ -1,6 +1,10 @@
 import os
-import psutil
+import time
 import asyncio
+import datetime
+from urllib.parse import quote_plus
+
+import psutil
 import websockets
 import discord
 from discord.ext import commands
@@ -11,70 +15,312 @@ from discord import app_commands
 # ==============================================================================
 DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
 GITHUB_RAW_SCRIPT = "https://raw.githubusercontent.com/giangveso0-ctrl/RobloxOnDiscord-Test/main/bridge.lua"
+REPO_URL = "https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test"
+WS_HOST = "localhost"
+WS_PORT = 8765
+DEBUG_CHANNEL = "debug"
 
-# Khởi tạo Bot Discord
+# ==============================================================================
+# 🎨 COLOURS / BẢNG MÀU
+# ==============================================================================
+class Colour:
+    SUCCESS = 0x2ECC71   # green
+    ERROR = 0xE74C3C     # red
+    WARNING = 0xF39C12   # orange
+    INFO = 0x3498DB      # blue
+    PURPLE = 0x9B59B6
+    PINK = 0xFF6B9D
+    TEAL = 0x1ABC9C
+    GOLD = 0xF1C40F
+    DARK = 0x2C2F33
+
+
+class Ansi:
+    """ANSI colour codes for the console."""
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    MAGENTA = "\033[95m"
+    CYAN = "\033[96m"
+    GREY = "\033[90m"
+
+
+# Makes ANSI colours work in Windows CMD / PowerShell
+os.system("")
+
+LOG_STYLES = {
+    "ok":     (Ansi.GREEN,   "  OK  "),
+    "info":   (Ansi.CYAN,    " INFO "),
+    "warn":   (Ansi.YELLOW,  " WARN "),
+    "error":  (Ansi.RED,     "ERROR "),
+    "roblox": (Ansi.MAGENTA, "ROBLOX"),
+    "conn":   (Ansi.GREEN,   " CONN "),
+    "disc":   (Ansi.RED,     " DISC "),
+}
+
+
+def log(level: str, message: str) -> None:
+    colour, label = LOG_STYLES.get(level, (Ansi.RESET, " LOG  "))
+    stamp = datetime.datetime.now().strftime("%H:%M:%S")
+    print(f"{Ansi.GREY}{stamp}{Ansi.RESET} {colour}{Ansi.BOLD}[{label}]{Ansi.RESET} {colour}{message}{Ansi.RESET}")
+
+
+def print_banner() -> None:
+    lines = [
+        "╔══════════════════════════════════════════════════╗",
+        "║        ⚡  ROBLOX  ON  DISCORD  BRIDGE  ⚡       ║",
+        "║          WebSocket Remote Command Hub            ║",
+        "╚══════════════════════════════════════════════════╝",
+    ]
+    colours = [Ansi.CYAN, Ansi.BLUE, Ansi.MAGENTA, Ansi.CYAN]
+    print()
+    for colour, line in zip(colours, lines):
+        print(f"{colour}{Ansi.BOLD}{line}{Ansi.RESET}")
+    print(f"{Ansi.GREY}  {REPO_URL}{Ansi.RESET}\n")
+
+
+# ==============================================================================
+# 🤖 BOT SETUP
+# ==============================================================================
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=['.', '!'], intents=intents)
 bot.remove_command('help')
 
-# Lưu danh sách các Roblox Client đang kết nối WebSocket
+# Roblox clients currently connected over WebSocket
 connected_clients = set()
+START_TIME = time.time()
+_ws_started = False
+
+
+# ==============================================================================
+# 🧩 EMBED HELPERS
+# ==============================================================================
+def make_embed(title: str, description: str = None, colour: int = Colour.INFO) -> discord.Embed:
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        colour=colour,
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.set_footer(text="RobloxOnDiscord Bridge • Bot Automation System")
+    return embed
+
+
+def code_block(code: str, limit: int = 1500, lang: str = "lua") -> str:
+    """Wrap code in a block, truncating it and escaping stray backticks."""
+    code = code.strip().replace("```", "`\u200b``")
+    if len(code) > limit:
+        code = code[:limit] + "\n-- ... (đã rút gọn / truncated)"
+    return f"```{lang}\n{code}\n```"
+
+
+def loadstring_snippet() -> str:
+    return f'loadstring(game:HttpGet("{GITHUB_RAW_SCRIPT}"))()'
+
+
+def format_uptime(seconds: float) -> str:
+    seconds = int(seconds)
+    hours, rest = divmod(seconds, 3600)
+    minutes, secs = divmod(rest, 60)
+    return f"{hours}h {minutes}m {secs}s" if hours else f"{minutes}m {secs}s"
+
+
+def roblox_running() -> bool:
+    return any(
+        p.info['name'] and p.info['name'].lower() == "robloxplayerbeta.exe"
+        for p in psutil.process_iter(['name'])
+    )
+
+
+def not_connected_embed() -> discord.Embed:
+    embed = make_embed(
+        "🔴 DISCONNECTED",
+        "Chưa kết nối WebSocket với Roblox!\nNo active Roblox client connected!",
+        Colour.ERROR,
+    )
+    embed.add_field(
+        name="💡 Cách kết nối / How to connect",
+        value="Chạy lệnh `/inject` để xem hướng dẫn.\nRun `/inject` for instructions.",
+        inline=False,
+    )
+    return embed
+
+
+def wrong_channel_embed() -> discord.Embed:
+    return make_embed(
+        "⚠️ Sai kênh / Wrong channel",
+        f"Lệnh này chỉ được phép dùng trong kênh `#{DEBUG_CHANNEL}`!\n"
+        f"This command can only be used in `#{DEBUG_CHANNEL}`!",
+        Colour.WARNING,
+    )
+
+
+def build_status_embed(show_loadstring: bool = False) -> discord.Embed:
+    running = roblox_running()
+    clients = len(connected_clients)
+
+    if clients > 0 and running:
+        title, colour = "🟢 CONNECTED", Colour.SUCCESS
+        desc = "Roblox bridge đang hoạt động hoàn hảo!\nBridge is active and ready."
+    elif running:
+        title, colour = "🟠 WAITING FOR SCRIPT", Colour.WARNING
+        desc = "Game đang chạy nhưng chưa nạp script!\nGame running but script not injected!"
+    else:
+        title, colour = "🔴 DISCONNECTED", Colour.ERROR
+        desc = "Không tìm thấy tiến trình Roblox!\nRoblox process not found!"
+
+    embed = make_embed(title, desc, colour)
+    embed.add_field(name="🎮 Roblox", value="🟢 Running" if running else "🔴 Not found", inline=True)
+    embed.add_field(name="🔌 WebSocket", value=f"`{clients}` client(s)", inline=True)
+    embed.add_field(name="📡 Latency", value=f"`{round(bot.latency * 1000)} ms`", inline=True)
+    embed.add_field(name="🌐 Endpoint", value=f"`ws://{WS_HOST}:{WS_PORT}`", inline=True)
+    embed.add_field(name="⏱️ Uptime", value=f"`{format_uptime(time.time() - START_TIME)}`", inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True)
+
+    if show_loadstring and running and clients == 0:
+        embed.add_field(
+            name="📋 Chạy trong Executor / Run in your executor",
+            value=code_block(loadstring_snippet()),
+            inline=False,
+        )
+    return embed
+
+
+def build_help_embed() -> discord.Embed:
+    embed = make_embed(
+        "📖 Roblox Bridge Hub — Hướng Dẫn / Help",
+        "Hệ thống quản lý Roblox qua WebSocket\nWebSocket Management System",
+        Colour.PURPLE,
+    )
+    embed.add_field(
+        name="📜 Lệnh Tiền Tố / Prefix Commands (`!` hoặc `.`)",
+        value=(
+            "`!inject` — Kiểm tra trạng thái / Check status\n"
+            "`!exec <script>` — Chạy script dài hoặc file đính kèm / Long scripts & files\n"
+            "`!status` — Xem kết nối / View connections"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="⚡ Thực Thi / Execution",
+        value=(
+            "`/exec <code>` — Gửi script ngắn / Quick short script\n"
+            "`/findscript <source> <keyword>` — Tìm script Rscripts / ScriptBlox"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="🎮 Tính Năng / Features",
+        value=(
+            "`/esp` — 👁️ Nhìn xuyên tường / Player ESP\n"
+            "`/fly` · `/unfly` — ✈️ Bay / Flight mode\n"
+            "`/clicktotp` — 🖱️ Ctrl+Click dịch chuyển / Click-to-TP\n"
+            "`/autoheal` — ❤️ Tự hồi máu / Auto-Heal\n"
+            "`/fpsboost` — 🚀 Tăng FPS / Boost FPS"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="🧰 Hệ Thống / System",
+        value=(
+            "`/inject` — 🔌 Kiểm tra & kết nối / Check & connect\n"
+            "`/status` — 📊 Trạng thái / Status\n"
+            "`/cre` — 🌟 Thông tin tác giả / Credits"
+        ),
+        inline=False,
+    )
+    return embed
+
 
 # ==============================================================================
 # 🌐 WEBSOCKET SERVER (CẦU NỐI ROBLOX)
 # ==============================================================================
 async def ws_handler(websocket):
     connected_clients.add(websocket)
-    print(f"🟢 [CONNECTED] Roblox client connected! Total active: {len(connected_clients)}")
+    log("conn", f"Roblox client connected! Total active: {len(connected_clients)}")
     try:
         async for message in websocket:
-            print(f"[ROBLOX LOG]: {message}")
+            log("roblox", str(message))
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
-        connected_clients.remove(websocket)
-        print(f"🔴 [DISCONNECTED] Roblox client disconnected. Total active: {len(connected_clients)}")
+        connected_clients.discard(websocket)
+        log("disc", f"Roblox client disconnected. Total active: {len(connected_clients)}")
+
 
 async def start_websocket_server():
-    async with websockets.serve(ws_handler, "localhost", 8765):
-        print("🚀 WebSocket Server running successfully at ws://localhost:8765")
+    async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
+        log("ok", f"WebSocket Server running at ws://{WS_HOST}:{WS_PORT}")
         await asyncio.Future()
+
 
 @bot.event
 async def on_ready():
-    print(f"✅ Bot logged in as: {bot.user} (English/Vietnamese Dual Mode)")
+    global _ws_started
+    log("ok", f"Bot logged in as: {bot.user} (English/Vietnamese Dual Mode)")
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} Slash Command(s).")
+        log("ok", f"Synced {len(synced)} Slash Command(s).")
     except Exception as e:
-        print(f"Sync error: {e}")
-    
-    bot.loop.create_task(start_websocket_server())
+        log("error", f"Sync error: {e}")
+
+    # on_ready can fire more than once; only start the WebSocket server a single time
+    if not _ws_started:
+        _ws_started = True
+        bot.loop.create_task(start_websocket_server())
+
 
 async def send_to_roblox(script_code: str) -> bool:
     if not connected_clients:
         return False
-    
+
     dead_sockets = set()
-    for ws in connected_clients:
+    for ws in list(connected_clients):
         try:
             await ws.send(script_code)
         except Exception:
             dead_sockets.add(ws)
-            
+
     for ws in dead_sockets:
-        connected_clients.remove(ws)
-        
+        connected_clients.discard(ws)
+
     return len(connected_clients) > 0
+
 
 def is_debug_channel():
     async def predicate(interaction: discord.Interaction) -> bool:
-        if interaction.channel and interaction.channel.name == "debug":
+        if interaction.channel and interaction.channel.name == DEBUG_CHANNEL:
             return True
-        await interaction.response.send_message("⚠️ Lệnh này chỉ được phép sử dụng trong kênh `#debug` / This command can only be used in `#debug`!", ephemeral=True)
+        await interaction.response.send_message(embed=wrong_channel_embed(), ephemeral=True)
         return False
     return app_commands.check(predicate)
+
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.CheckFailure):
+        return  # already answered by the channel check
+    log("error", f"Command error: {error}")
+    embed = make_embed("❌ Lỗi / Error", f"```{error}```", Colour.ERROR)
+    if interaction.response.is_done():
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    else:
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+async def run_feature(interaction: discord.Interaction, script: str, *, title: str, description: str, colour: int):
+    """Send a Lua feature script to Roblox and answer with a coloured embed."""
+    if await send_to_roblox(script):
+        embed = make_embed(title, description, colour)
+    else:
+        embed = not_connected_embed()
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 # ==============================================================================
 # 🛠️ TRADITIONAL COMMANDS (!exec chuyên dụng cho script dài & file đính kèm)
@@ -82,95 +328,93 @@ def is_debug_channel():
 
 @bot.command(name="help")
 async def legacy_help(ctx):
-    if ctx.channel.name != "debug":
-        return await ctx.send("⚠️ Vui lòng dùng trong kênh `#debug`!")
-    
-    embed = discord.Embed(
-        title="📖 Roblox Bridge Hub - Hướng Dẫn / Help", 
-        description="Hệ thống quản lý Roblox qua WebSocket / WebSocket Management System",
-        color=0x3498DB
-    )
-    embed.add_field(
-        name="📜 Lệnh Tiền Tố (Prefix Commands)",
-        value="• `!inject` - Kiểm tra trạng thái / Check status\n• `!exec <script>` hoặc đính kèm file - Thực thi script dài / Execute long scripts & files\n• `!status` - Xem kết nối / View connections",
-        inline=False
-    )
-    embed.add_field(
-        name="⚡ Slash Commands (/)",
-        value="• `/exec <code/>` - Gửi script ngắn nhanh chóng / Quick short script execution\n• `/findscript <source> <keyword>` - Tìm kiếm script từ Rscripts hoặc ScriptBlox\n• `/esp` - Bật/tắt tính năng nhìn xuyên tường ESP / Toggle ESP\n• `/fpsboost` - Tối ưu hóa đồ họa, tăng FPS / Boost game performance\n• `/fly` / `/unfly` - Bật tắt bay mượt mà / Toggle flight mode\n• `/clicktotp` - Bật dịch chuyển click chuột (Ctrl+Click) / Toggle Click-to-TP\n• `/autoheal` - Bật tự động hồi máu liên tục / Toggle Auto-Heal\n• `/cre` - Thông tin tác giả & nhà phát triển / Credits",
-        inline=False
-    )
-    await ctx.send(embed=embed)
+    if ctx.channel.name != DEBUG_CHANNEL:
+        return await ctx.send(embed=wrong_channel_embed())
+    await ctx.send(embed=build_help_embed())
+
 
 @bot.command(name="inject")
 async def legacy_inject(ctx):
-    if ctx.channel.name != "debug":
-        return await ctx.send("⚠️ Vui lòng dùng trong kênh `#debug`!")
-        
-    running = any(p.info['name'] and p.info['name'].lower() == "robloxplayerbeta.exe" for p in psutil.process_iter(['name']))
-    is_connected = len(connected_clients) > 0
+    if ctx.channel.name != DEBUG_CHANNEL:
+        return await ctx.send(embed=wrong_channel_embed())
+    await ctx.send(embed=build_status_embed(show_loadstring=True))
 
-    if is_connected and running:
-        await ctx.send("🟢 **CONNECTED**: Đã tìm thấy game và WebSocket đang hoạt động! / Game found & WebSocket active!")
-    elif running and not is_connected:
-        msg = f"🔴 **DISCONNECTED**: Game đang chạy nhưng chưa nạp script! / Game running but script not injected!\nCopy lệnh này vào Executor của bạn / Run this in your executor:\n```lua\nloadstring(game:HttpGet(\"{GITHUB_RAW_SCRIPT}\"))()\n```"
-        await ctx.send(msg)
-    else:
-        await ctx.send("🔴 **DISCONNECTED**: Không tìm thấy tiến trình Roblox! / Roblox process not found!")
+
+@bot.command(name="status")
+async def legacy_status(ctx):
+    if ctx.channel.name != DEBUG_CHANNEL:
+        return await ctx.send(embed=wrong_channel_embed())
+    await ctx.send(embed=build_status_embed())
+
 
 @bot.command(name="exec")
 async def legacy_exec(ctx, *, script_code: str = None):
     """Lệnh !exec tối ưu chuyên sâu cho việc nhận script dài và file đính kèm .lua/.txt"""
-    if ctx.channel.name != "debug":
-        return await ctx.send("⚠️ Vui lòng dùng trong kênh `#debug`!")
-        
+    if ctx.channel.name != DEBUG_CHANNEL:
+        return await ctx.send(embed=wrong_channel_embed())
+
     if ctx.message.attachments:
         attachment = ctx.message.attachments[0]
         if attachment.filename.endswith(('.lua', '.txt')):
             try:
                 script_code = (await attachment.read()).decode('utf-8')
             except Exception as e:
-                return await ctx.send(f"❌ Lỗi đọc file / File read error: `{e}`")
-            
+                return await ctx.send(embed=make_embed(
+                    "❌ Lỗi đọc file / File read error", f"```{e}```", Colour.ERROR))
+
     if not script_code:
-        return await ctx.send("⚠️ Vui lòng nhập nội dung script hoặc đính kèm file `.lua` / Please provide script code or attach a file!")
-        
-    success = await send_to_roblox(script_code)
-    if success:
-        display_code = script_code[:800] + "\n... (đã rút gọn / truncated)" if len(script_code) > 800 else script_code
-        await ctx.send(f"⚡ **[LONG SCRIPT EXECUTED] - Đã gửi script dài tới Roblox successfully!**\n```lua\n{display_code}\n```")
+        return await ctx.send(embed=make_embed(
+            "⚠️ Thiếu script / Missing script",
+            "Vui lòng nhập nội dung script hoặc đính kèm file `.lua`\n"
+            "Please provide script code or attach a file!",
+            Colour.WARNING))
+
+    if await send_to_roblox(script_code):
+        embed = make_embed(
+            "⚡ LONG SCRIPT EXECUTED",
+            "Đã gửi script dài tới Roblox thành công!\nScript sent to Roblox successfully!",
+            Colour.SUCCESS)
+        embed.add_field(name=f"📜 Script ({len(script_code)} ký tự / chars)",
+                        value=code_block(script_code, limit=900), inline=False)
+        await ctx.send(embed=embed)
     else:
-        await ctx.send("🔴 **DISCONNECTED**: Chưa kết nối WebSocket với Roblox! / No active Roblox client connected!")
+        await ctx.send(embed=not_connected_embed())
+
 
 # ==============================================================================
 # ⚡ SLASH COMMANDS (Tính năng nâng cao, Rscripts/ScriptBlox, ESP, FPS Boost, Credits)
 # ==============================================================================
 
+@bot.tree.command(name="help", description="Xem danh sách lệnh / Show all commands")
+@is_debug_channel()
+async def slash_help(interaction: discord.Interaction):
+    await interaction.response.send_message(embed=build_help_embed(), ephemeral=True)
+
+
 @bot.tree.command(name="inject", description="Kiểm tra trạng thái tiến trình và kết nối / Check process & connection status")
 @is_debug_channel()
 async def slash_inject(interaction: discord.Interaction):
-    running = any(p.info['name'] and p.info['name'].lower() == "robloxplayerbeta.exe" for p in psutil.process_iter(['name']))
-    is_connected = len(connected_clients) > 0
+    await interaction.response.send_message(embed=build_status_embed(show_loadstring=True), ephemeral=True)
 
-    if is_connected and running:
-        await interaction.response.send_message("🟢 **CONNECTED**: Roblox bridge đang hoạt động hoàn hảo / Bridge is active!", ephemeral=True)
-    elif running and not is_connected:
-        code_text = f'loadstring(game:HttpGet("{GITHUB_RAW_SCRIPT}"))()'
-        await interaction.response.send_message(f"🔴 **DISCONNECTED**: Chạy loadstring này trong Executor của bạn / Run this in your executor:\n```lua\n{code_text}\n```", ephemeral=True)
-    else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Không tìm thấy tiến trình Roblox! / Process not found!", ephemeral=True)
 
 @bot.tree.command(name="exec", description="Thực thi nhanh mã Lua ngắn / Quick execute short Lua code")
 @is_debug_channel()
 async def slash_exec(interaction: discord.Interaction, code: str):
     if not code:
-        return await interaction.response.send_message("⚠️ Vui lòng nhập mã lệnh Lua! / Please enter Lua code!", ephemeral=True)
+        return await interaction.response.send_message(embed=make_embed(
+            "⚠️ Thiếu mã / Missing code", "Vui lòng nhập mã lệnh Lua! / Please enter Lua code!",
+            Colour.WARNING), ephemeral=True)
 
-    success = await send_to_roblox(code)
-    if success:
-        await interaction.response.send_message(f"⚡ **[QUICK EXEC] - Đã gửi thành công! / Sent successfully!**\n```lua\n{code}\n```", ephemeral=True)
+    if await send_to_roblox(code):
+        embed = make_embed(
+            "⚡ QUICK EXEC",
+            "Đã gửi thành công!\nSent successfully!",
+            Colour.SUCCESS)
+        embed.add_field(name="📜 Script", value=code_block(code, limit=900), inline=False)
     else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Chưa kết nối WebSocket! / No clients connected!", ephemeral=True)
+        embed = not_connected_embed()
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 @bot.tree.command(name="findscript", description="Tìm kiếm script từ Rscripts hoặc ScriptBlox / Search scripts from Rscripts or ScriptBlox")
 @app_commands.choices(source=[
@@ -179,26 +423,21 @@ async def slash_exec(interaction: discord.Interaction, code: str):
 ])
 @is_debug_channel()
 async def slash_findscript(interaction: discord.Interaction, source: str, keyword: str):
+    query = quote_plus(keyword)
     if source == "rscripts":
-        search_url = f"https://rscripts.net/?q={keyword.replace(' ', '+')}"
-        embed = discord.Embed(
-            title=f"🌐 Kết quả tìm kiếm từ Rscripts",
-            description=f"Từ khóa: **{keyword}**",
-            color=0x9B59B6
-        )
-        embed.add_field(name="🔗 Link tra cứu trực tiếp", value=f"[Bấm vào đây để xem trên Rscripts]({search_url})", inline=False)
+        site, url, colour = "Rscripts", f"https://rscripts.net/?q={query}", Colour.PURPLE
     else:
-        search_url = f"https://scriptblox.com/search?q={keyword.replace(' ', '+')}"
-        embed = discord.Embed(
-            title=f"🌐 Kết quả tìm kiếm từ ScriptBlox",
-            description=f"Từ khóa: **{keyword}**",
-            color=0x3498DB
-        )
-        embed.add_field(name="🔗 Link tra cứu trực tiếp", value=f"[Bấm vào đây để xem trên ScriptBlox]({search_url})", inline=False)
-        
-    embed.add_field(name="💡 Gợi ý lệnh", value="Truy cập trang web trên để lấy loadstring và dùng lệnh `/exec` để chạy.", inline=False)
-    embed.set_footer(text=f"Nguồn: {source.capitalize()} | Bot Automation System")
+        site, url, colour = "ScriptBlox", f"https://scriptblox.com/search?q={query}", Colour.INFO
+
+    embed = make_embed(f"🌐 Kết quả tìm kiếm từ {site}", f"Từ khóa / Keyword: **{keyword}**", colour)
+    embed.add_field(name="🔗 Link tra cứu trực tiếp",
+                    value=f"[Bấm vào đây để xem trên {site}]({url})", inline=False)
+    embed.add_field(name="💡 Gợi ý lệnh",
+                    value="Truy cập trang web trên để lấy loadstring và dùng lệnh `/exec` để chạy.",
+                    inline=False)
+    embed.set_footer(text=f"Nguồn: {site} | Bot Automation System")
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 @bot.tree.command(name="esp", description="Bật tính năng nhìn xuyên tường (ESP Box/Name) / Enable player ESP")
 @is_debug_channel()
@@ -221,11 +460,11 @@ async def slash_esp(interaction: discord.Interaction):
         end
     end)
     """
-    success = await send_to_roblox(script)
-    if success:
-        await interaction.response.send_message("👁️ Đã bật **ESP** (Highlight người chơi)! / ESP Enabled!", ephemeral=True)
-    else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Chưa kết nối game! / Not connected!", ephemeral=True)
+    await run_feature(interaction, script,
+                      title="👁️ ESP ENABLED",
+                      description="Đã bật **ESP** (Highlight người chơi)!\nPlayer highlights are now visible.",
+                      colour=Colour.PINK)
+
 
 @bot.tree.command(name="fpsboost", description="Tối ưu hóa đồ họa, giảm lag và tăng FPS / Boost FPS & reduce lag")
 @is_debug_channel()
@@ -246,11 +485,11 @@ async def slash_fpsboost(interaction: discord.Interaction):
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level0
     end)
     """
-    success = await send_to_roblox(script)
-    if success:
-        await interaction.response.send_message("🚀 Đã kích hoạt **FPS Boost** (Tối ưu hóa đồ họa thành công)! / FPS Boost Enabled!", ephemeral=True)
-    else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Chưa kết nối game! / Not connected!", ephemeral=True)
+    await run_feature(interaction, script,
+                      title="🚀 FPS BOOST ENABLED",
+                      description="Đã kích hoạt **FPS Boost** (tối ưu hóa đồ họa thành công)!\nGraphics optimised for performance.",
+                      colour=Colour.TEAL)
+
 
 @bot.tree.command(name="fly", description="Bật chế độ bay mượt mà / Enable smooth flight mode")
 @is_debug_channel()
@@ -281,11 +520,11 @@ async def slash_fly(interaction: discord.Interaction):
         end)
     end)
     """
-    success = await send_to_roblox(script)
-    if success:
-        await interaction.response.send_message("✈️ Đã bật **Fly Mode**! / Flight enabled!", ephemeral=True)
-    else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Chưa kết nối game! / Not connected!", ephemeral=True)
+    await run_feature(interaction, script,
+                      title="✈️ FLY MODE ENABLED",
+                      description="Đã bật **Fly Mode**!\nFlight enabled — use `/unfly` to stop.",
+                      colour=Colour.INFO)
+
 
 @bot.tree.command(name="unfly", description="Tắt chế độ bay và khôi phục vật lý / Disable flight & restore physics")
 @is_debug_channel()
@@ -307,7 +546,11 @@ async def slash_unfly(interaction: discord.Interaction):
     end)
     """
     await send_to_roblox(script)
-    await interaction.response.send_message("🛑 Đã tắt **Fly Mode**! / Flight disabled!", ephemeral=True)
+    await interaction.response.send_message(embed=make_embed(
+        "🛑 FLY MODE DISABLED",
+        "Đã tắt **Fly Mode**!\nFlight disabled, physics restored.",
+        Colour.ERROR), ephemeral=True)
+
 
 @bot.tree.command(name="clicktotp", description="Bật tính năng Click chuột để dịch chuyển (Ctrl + Click) / Enable Click-to-TP")
 @is_debug_channel()
@@ -329,11 +572,11 @@ async def slash_clicktotp(interaction: discord.Interaction):
         end)
     end)
     """
-    success = await send_to_roblox(script)
-    if success:
-        await interaction.response.send_message("🖱️ Đã bật **Click-to-TP** (Giữ Ctrl + Click chuột trái để dịch chuyển)! / Click-to-TP Enabled!", ephemeral=True)
-    else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Chưa kết nối game!", ephemeral=True)
+    await run_feature(interaction, script,
+                      title="🖱️ CLICK-TO-TP ENABLED",
+                      description="Đã bật **Click-to-TP**!\nGiữ **Ctrl + Click chuột trái** để dịch chuyển / Hold **Ctrl + Left Click** to teleport.",
+                      colour=Colour.WARNING)
+
 
 @bot.tree.command(name="autoheal", description="Tự động hồi máu tối đa liên tục / Enable Auto-Heal")
 @is_debug_channel()
@@ -352,40 +595,41 @@ async def slash_autoheal(interaction: discord.Interaction):
         end)
     end)
     """
-    success = await send_to_roblox(script)
-    if success:
-        await interaction.response.send_message("❤️ Đã bật **Auto-Heal** (Tự động hồi đầy máu liên tục)! / Auto-Heal Enabled!", ephemeral=True)
-    else:
-        await interaction.response.send_message("🔴 **DISCONNECTED**: Chưa kết nối game!", ephemeral=True)
+    await run_feature(interaction, script,
+                      title="❤️ AUTO-HEAL ENABLED",
+                      description="Đã bật **Auto-Heal** (tự động hồi đầy máu liên tục)!\nHealth will refill automatically.",
+                      colour=Colour.ERROR)
+
 
 @bot.tree.command(name="cre", description="Hiển thị thông tin tác giả và dự án / Credits & Information")
 @is_debug_channel()
 async def slash_cre(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="🌟 RobloxOnDiscord Bridge - Credits",
-        description="Hệ thống cầu nối WebSocket tương tác giữa Discord Bot và Roblox Client.",
-        color=0xF1C40F
-    )
+    embed = make_embed(
+        "🌟 RobloxOnDiscord Bridge — Credits",
+        "Hệ thống cầu nối WebSocket tương tác giữa Discord Bot và Roblox Client.\n"
+        "WebSocket bridge between a Discord bot and the Roblox client.",
+        Colour.GOLD)
     embed.add_field(name="👨‍💻 Developer / Tác giả", value="giangveso0-ctrl", inline=True)
-    embed.add_field(name="🔗 GitHub Repository", value="[RobloxOnDiscord-Test](https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test)", inline=False)
-    embed.add_field(name="🌐 Protocol", value="Localhost WebSocket (Port 8765)", inline=True)
+    embed.add_field(name="🌐 Protocol", value=f"Localhost WebSocket (Port {WS_PORT})", inline=True)
+    embed.add_field(name="🔗 GitHub Repository", value=f"[RobloxOnDiscord-Test]({REPO_URL})", inline=False)
     embed.set_footer(text="Cảm ơn bạn đã sử dụng hệ thống tự động hóa này!")
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 @bot.tree.command(name="status", description="Kiểm tra trạng thái máy chủ WebSocket / Check WebSocket server status")
 @is_debug_channel()
 async def slash_status(interaction: discord.Interaction):
-    count = len(connected_clients)
-    if count > 0:
-        status = "🟢 CONNECTED (Đang hoạt động)"
-    else:
-        status = "🔴 DISCONNECTED (Chưa kết nối)"
-        
-    await interaction.response.send_message(f"📊 **Trạng thái / Status:** {status} (`{count} client active`)", ephemeral=True)
+    await interaction.response.send_message(embed=build_status_embed(), ephemeral=True)
 
-# Khởi chạy Bot
+
+# ==============================================================================
+# 🚀 KHỞI CHẠY BOT / START
+# ==============================================================================
 if __name__ == "__main__":
+    print_banner()
     if DISCORD_BOT_TOKEN == "YOUR_DISCORD_BOT_TOKEN_HERE":
-        print("❌ ERROR: Vui lòng thay thế 'YOUR_DISCORD_BOT_TOKEN_HERE' bằng Token Discord thực tế của bạn!")
+        log("error", "Vui lòng thay 'YOUR_DISCORD_BOT_TOKEN_HERE' bằng Token Discord thực tế của bạn!")
+        log("error", "Please replace 'YOUR_DISCORD_BOT_TOKEN_HERE' with your real Discord bot token!")
     else:
+        log("info", "Starting bot...")
         bot.run(DISCORD_BOT_TOKEN)
