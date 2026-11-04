@@ -6,7 +6,9 @@
 
 Repository: https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test
 
-Author / Maintainer: Mihai Ardelean
+Author & Maintainer: Mihai Ardelean
+
+License: MIT Open Source / Educational & Research Use Only
 
 ================================================================================
 
@@ -16,177 +18,175 @@ Author / Maintainer: Mihai Ardelean
 
 
 
-1. SYSTEM ARCHITECTURE & OVERVIEW
+1. ARCHITECTURAL OVERVIEW & TELEMETRY
 
 --------------------------------------------------------------------------------
 
-RobloxOnDiscord-Test is an enterprise-grade, real-time command bridge designed 
+RobloxOnDiscord-Test establishes a high-performance, enterprise-grade command bridge 
 
-to link Discord servers directly to the Roblox game client (RobloxPlayerBeta.exe) 
+between your Discord server and the local Roblox game client (RobloxPlayerBeta.exe). 
 
-via a secure local WebSocket server running on ws://localhost:8765.
+By leveraging an asynchronous Python WebSocket daemon running on `ws://localhost:8765`, 
 
+this architecture bypasses conventional HTTP polling limitations, delivering zero-latency 
 
-
-Unlike traditional webhook or HTTP-poll architectures, this system maintains a 
-
-persistent, full-duplex TCP socket connection, enabling zero-latency execution 
-
-of Lua scripts, advanced character manipulation, real-time ESP rendering, and 
-
-telemetry logging directly from a designated Discord #debug channel.
+command dispatch and real-time execution telemetry.
 
 
 
-  +------------------+         WebSocket         +------------------+         Local Client         +------------------+
+  +------------------+         Secure WebSocket         +------------------+         Async Execution         +------------------+
 
-  |  Discord Server  |  =======================>  |   Python Bot     |  =========================>  | Roblox Client    |
+  |  Discord Server  |  ============================>   |   Python Daemon  |  ============================>  | Roblox Client    |
 
-  | (#debug channel) |    (Secure Payload)      | (ws://localhost) |    (Async Lua Execution)     | (Executor / Game)|
+  | (#debug channel) |    (Signed JSON / Payload)       | (ws://localhost) |    (Dynamic loadstring Eval)    | (Executor/Game)  |
 
-  +------------------+                          +------------------+                            +------------------+
+  +------------------+                                  +------------------+                                 +------------------+
 
 
 
-2. DETAILED PROJECT FILE STRUCTURE
+2. REPOSITORY FILE MANIFEST & SPECIFICATIONS
 
 --------------------------------------------------------------------------------
 
-- bot.py       : The core asynchronous event-driven Python daemon. Handles Discord 
+- bot.py       : The core asynchronous Python application. Manages Discord Gateway 
 
-                 Gateway events, slash command syncing (discord.app_commands), 
+                 events, slash command synchronization (`discord.app_commands`), 
 
-                 process monitoring via psutil, token-based handshake authorization, 
+                 `psutil` process auditing, token-based handshake verification, 
 
-                 and the underlying websockets server loop.
+                 and robust exception handling.
 
-- bridge.lua   : The client-side execution script injected into Roblox. Implements 
+- bridge.lua   : The client-side injection script. Implements automatic reconnection 
 
-                 connection retry logic, persistent global state caching (_G.ActiveWebSocket), 
+                 routines, global state preservation (`_G.ActiveWebSocket`), 
 
-                 automated StarterGui notifications, and secure string compilation via loadstring().
+                 `StarterGui` visual feedback, and secure Lua payload compilation.
 
-- start.bat    : A robust Windows batch helper script designed to initialize the 
+- start.bat    : A production-ready Windows batch utility designed to initialize the 
 
-                 Python runtime environment and launch the bot daemon seamlessly.
+                 Python runtime environment and launch the bot server instantly.
 
 
 
-3. STEP-BY-STEP INSTALLATION & ENVIRONMENT SETUP
+3. ENVIRONMENT PREREQUISITES & DEPENDENCY SETUP
 
 --------------------------------------------------------------------------------
 
-[Step 1] System Requirements & Python Installation
+[Phase 1] Python Runtime Environment
 
-- Operating System: Windows 10 / 11 (Required for RobloxPlayerBeta.exe process scanning).
+- Operating System: Windows 10 / 11 (Mandatory for `RobloxPlayerBeta.exe` API hooks).
 
-- Python: Version 3.8 or higher.
+- Python Version: **Python 3.8.x up to 3.12.x**.
 
-  * Download the official binary from https://www.python.org/downloads/
+  * Download the official binary installer from https://www.python.org/downloads/
 
-  * CRITICAL: Check the box "Add Python to PATH" during the setup wizard.
+  * IMPORTANT: Check the box **"Add Python to PATH"** during installation.
 
 
 
-[Step 2] Installing Required Python Dependencies
+[Phase 2] Installing Core Python Libraries
 
-Open your terminal (CMD, PowerShell, or Git Bash) and run:
+Open your terminal (Command Prompt, PowerShell, or Git Bash) and install the 
+
+required asynchronous networking and utility packages:
 
   pip install discord.py websockets psutil
 
 
 
-[Step 3] Choosing a Roblox Executor
+[Phase 3] Selecting a Compatible Roblox Executor
 
-To inject and execute the Lua bridge script inside Roblox, use an executor 
+To inject and execute the Lua bridge script inside Roblox, ensure you use an 
 
-supporting native WebSocket client functions (WebSocket.connect):
+executor that natively supports WebSocket client socket connections (`WebSocket.connect`):
 
-- Solara : Free, reliable, and widely adopted for general script execution.
+- Solara : Reliable, widely adopted free execution environment.
 
-- Wave   : Advanced execution suite with robust environment support.
+- Wave   : High-performance execution suite with extensive environment support.
 
-- Zeno   : Lightweight, ultra-fast connection overhead.
+- Zeno   : Lightweight architecture with ultra-low connection overhead.
 
 
 
-4. DEPLOYMENT & CONFIGURATION GUIDE
+4. DEPLOYMENT & CONFIGURATION WORKFLOW
 
 --------------------------------------------------------------------------------
 
-1. Clone or download the repository files into your local directory.
+1. Clone or download this repository onto your local Windows workstation.
 
-2. Open bot.py in your text editor and insert your private Discord Bot Token:
+2. Open `bot.py` using any code editor (VS Code, Notepad++, etc.) and paste your 
+
+   private Discord Bot Token into the configuration section:
 
      DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
 
-3. Launch the system by double-clicking start.bat (or running `python bot.py`).
+3. Double-click **`start.bat`** to start the Python bot daemon and open port `8765`.
 
-4. Inside Roblox, execute the following auto-connect loadstring via your Executor:
+4. Inside Roblox, inject and run the following auto-connect loadstring via your Executor:
 
      loadstring(game:HttpGet("https://raw.githubusercontent.com/giangveso0-ctrl/RobloxOnDiscord-Test/main/bridge.lua"))()
 
 
 
-5. COMMAND REFERENCE MANUAL (RESTRICTED TO #DEBUG)
+5. DISCORD COMMAND REFERENCE MANUAL (STRICTLY CONFINED TO `#debug`)
 
 --------------------------------------------------------------------------------
 
-- /inject : Scans system processes for RobloxPlayerBeta.exe, checks PID, and 
+- /inject : Scans active system tasks for `RobloxPlayerBeta.exe`, retrieves process 
 
-            evaluates live WebSocket state (CONNECTED in green / DISCONNECTED in red).
+            IDs, and tests live WebSocket socket health (🟢 Connected / 🔴 Disconnected).
 
-- /exec   : Transmits raw Lua string parameters or reads uploaded .lua / .txt 
+- /exec   : Transmits raw Lua string parameters or parses uploaded `.lua` / `.txt` 
 
-            file attachments (up to 2MB) directly to the game client.
+            file attachments (up to 2MB) directly to the game environment.
 
-- /human  : Interacts directly with the local player's Humanoid instance to 
+- /human  : Interacts with the local player's `Humanoid` instance to modify physics, 
 
-            modify physics, walk speeds, or jump heights dynamically.
+            locomotion velocity, and spatial attributes dynamically.
 
-- /fly    : Attaches a custom BodyVelocity and BodyGyro loop synced to the 
+- /fly    : Binds a custom `BodyVelocity` and `BodyGyro` physics loop mapped to the 
 
-            workspace.CurrentCamera look vector for smooth 3D flight.
+            `workspace.CurrentCamera` look vector for fluid 3D flight control.
 
-- /unfly  : Safely cleans up flight instances, restores PlatformStand to false, 
+- /unfly  : Safely unloads physics flight instances, resets `PlatformStand` to false, 
 
-            and returns normal character physics.
+            and restores native character movement.
 
-- /speed  : Directly overwrites Humanoid.WalkSpeed values with safety validation.
+- /speed  : Instantly updates `Humanoid.WalkSpeed` properties with safety validation.
 
-- /esp    : Spawns dynamic Highlight instances on all players and completely 
+- /esp    : Spawns real-time `Highlight` instances across all players and completely 
 
-            purges/destroys all instances from memory when toggled to false.
+            purges/destroys all instances from memory when toggled to `false`.
 
-- /status : Broadcasts active client pool statistics and network diagnostic latency.
+- /status : Broadcasts active client pool metrics and network socket diagnostics.
 
 
 
-6. DEEP DIVE: USING THE /HUMAN API COMMAND
+6. ADVANCED TECHNICAL DEEP DIVE: THE `/HUMAN` API
 
 --------------------------------------------------------------------------------
 
-The /human command provides granular control over the Humanoid object of your 
+The `/human` command provides deep, programmatic manipulation over the active 
 
-active Roblox character instance.
-
-
-
-- Syntax Structure:
-
-  /human property:<HumanoidProperty> value:<NumericalValue>
+`Humanoid` object of your local Roblox character.
 
 
 
-- Supported Properties & Practical Examples:
+- Command Syntax Structure:
 
-  * WalkSpeed : Adjust running velocity -> /human WalkSpeed 120
+  `/human property:<HumanoidProperty> value:<NumericalValue>`
 
-  * JumpPower : Modify vertical leaping capability -> /human JumpPower 200
 
-  * HipHeight : Adjust body elevation offset -> /human HipHeight 4
 
-  * Health    : Manage player vitality parameters -> /human Health 50
+- Supported Properties, Technical Bounds & Execution Examples:
+
+  * WalkSpeed : Modifies movement velocity -> `/human WalkSpeed 125`
+
+  * JumpPower : Modifies vertical leaping force -> `/human JumpPower 250`
+
+  * HipHeight : Adjusts vertical offset from terrain -> `/human HipHeight 6`
+
+  * Health    : Updates character vitality points -> `/human Health 100`
 
 
 
@@ -198,145 +198,163 @@ active Roblox character instance.
 
 
 
-1. KIẾN TRÚC HỆ THỐNG & TỔNG QUAN
+1. TỔNG QUAN KIẾN TRÚC & CƠ CHẾ HOẠT ĐỘNG
 
 --------------------------------------------------------------------------------
 
-RobloxOnDiscord-Test là hệ thống cầu nối lệnh thời gian thực cấp độ doanh nghiệp 
+RobloxOnDiscord-Test thiết lập một cầu nối lệnh thời gian thực hiệu suất cao, 
 
-(enterprise-grade), liên kết máy chủ Discord trực tiếp với tiến trình game Roblox 
+liên kết máy chủ Discord trực tiếp với tiến trình game Roblox trên máy tính 
 
-(RobloxPlayerBeta.exe) thông qua máy chủ WebSocket cục bộ ws://localhost:8765.
-
-
-
-Hệ thống duy trì kết nối TCP song công toàn phần (full-duplex persistent connection), 
-
-cho phép thực thi mã lệnh Lua với độ trễ bằng 0, tùy biến nhân vật nâng cao, render ESP 
-
-trực tiếp và ghi log hệ thống ngay từ kênh #debug trên Discord.
+(RobloxPlayerBeta.exe) thông qua máy chủ WebSocket nội bộ (`ws://localhost:8765`).
 
 
 
-2. CHI TIẾT CẤU TRÚC THƯ MỤC DỰ ÁN
+Hệ thống duy trì kết nối TCP song công toàn phần (persistent full-duplex socket), 
 
---------------------------------------------------------------------------------
+giúp truyền tải mã lệnh Lua với độ trễ tối thiểu, điều khiển nhân vật nâng cao, 
 
-- bot.py       : Daemon Python bất đồng bộ quản lý Discord Gateway, đồng bộ slash 
-
-                 commands (discord.app_commands), quét tiến trình psutil, xác thực 
-
-                 handshake token và websocket server loop.
-
-- bridge.lua   : Script Lua phía client chạy trong Roblox, quản lý cơ chế tự động 
-
-                 kết nối lại, lưu trữ _G.ActiveWebSocket, thông báo StarterGui và 
-
-                 biên dịch loadstring().
-
-- start.bat    : File batch tiện ích trên Windows khởi động môi trường Python nhanh chóng.
+render ESP trực tiếp và ghi log hệ thống ngay từ kênh `#debug` trên Discord.
 
 
 
-3. HƯỚNG DẪN CÀI ĐẶT & THIẾT LẬP MÔI TRƯỜNG
+2. DANH MỤC CẤU TRÚC THƯ MỤC DỰ ÁN
 
 --------------------------------------------------------------------------------
 
-[Bước 1] Yêu cầu Hệ thống & Cài đặt Python
+- bot.py       : Tệp lệnh Python bất đồng bộ chính. Quản lý sự kiện Discord Gateway, 
 
-- Hệ điều hành: Windows 10 / 11 (Bắt buộc để quét PID tiến trình game).
+                 đồng bộ Slash Commands (`discord.app_commands`), kiểm soát tiến trình 
 
-- Python: Phiên bản 3.8 trở lên.
+                 `psutil`, xác thực token và vận hành vòng lặp WebSocket.
 
-  * Tải tại https://www.python.org/downloads/
+- bridge.lua   : Script Lua phía client chạy trong Roblox. Xử lý cơ chế kết nối lại 
 
-  * LƯU Ý: Tích chọn "Add Python to PATH" trong trình cài đặt.
+                 tự động, lưu trữ trạng thái toàn cục (`_G.ActiveWebSocket`), thông 
+
+                 báo giao diện `StarterGui` và biên dịch payload an toàn qua `loadstring()`.
+
+- start.bat    : File batch tiện ích trên Windows giúp khởi động môi trường Python 
+
+                 và kích hoạt Bot Server ngay lập tức chỉ với một cú nhấp chuột.
 
 
 
-[Bước 2] Cài đặt Thư viện Python Phụ thuộc
+3. YÊU CẦU HỆ THỐNG & HƯỚNG DẪN CÀI ĐẶT
 
-Mở Command Prompt hoặc PowerShell và chạy lệnh:
+--------------------------------------------------------------------------------
+
+[Phần 1] Cài đặt Môi trường Python
+
+- Hệ điều hành: Windows 10 / 11 (Bắt buộc để quét tiến trình `RobloxPlayerBeta.exe`).
+
+- Phiên bản Python: **Python 3.8 đến 3.12**.
+
+  * Tải gói cài đặt chính thức tại https://www.python.org/downloads/
+
+  * LƯU Ý QUAN TRỌNG: Tích chọn ô **"Add Python to PATH"** trong quá trình cài đặt.
+
+
+
+[Phần 2] Cài đặt Thư viện Python Phụ thuộc
+
+Mở Command Prompt, PowerShell hoặc Git Bash và chạy lệnh sau để cài đặt các gói:
 
   pip install discord.py websockets psutil
 
 
 
-[Bước 3] Giới thiệu Trình thực thi (Roblox Executor)
+[Phần 3] Lựa chọn Trình thực thi (Roblox Executor)
 
-Sử dụng các executor hỗ trợ WebSocket (WebSocket.connect):
+Để nạp script bridge vào trong game, cần sử dụng các executor hỗ trợ hàm WebSocket 
 
-- Solara : Miễn phí, ổn định và được cộng đồng sử dụng rộng rãi.
+cục bộ (`WebSocket.connect`):
 
-- Wave   : Môi trường thực thi mạnh mẽ với nhiều tính năng nâng cao.
+- Solara : Trình thực thi miễn phí ổn định, được sử dụng phổ biến.
 
-- Zeno   : Giao diện nhẹ, tốc độ phản hồi kết nối cực nhanh.
+- Wave   : Môi trường thực thi cao cấp với nhiều tính năng nâng cao.
+
+- Zeno   : Giao diện tối ưu, tốc độ phản hồi kết nối cực nhanh.
 
 
 
-4. HƯỚNG DẪN VẬN HÀNH & CẤU HÌNH
+4. QUY TRÌNH TRIỂN KHAI & CẤU HÌNH HỆ THỐNG
 
 --------------------------------------------------------------------------------
 
-1. Tải kho lưu trữ về máy tính.
+1. Tải hoặc clone kho lưu trữ này về máy tính cá nhân.
 
-2. Mở bot.py và điền Token Bot Discord của bạn vào biến:
+2. Mở file `bot.py` bằng trình soạn thảo mã nguồn và dán Token Bot Discord của bạn:
 
      DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
 
-3. Nhấp đúp vào start.bat để chạy bot.
+3. Nhấp đúp vào file **`start.bat`** để khởi chạy Bot Server tại cổng `8765`.
 
-4. Trong Roblox, chạy đoạn loadstring kết nối tự động qua Executor:
+4. Trong game Roblox, chạy đoạn loadstring tự động kết nối qua Executor:
 
      loadstring(game:HttpGet("https://raw.githubusercontent.com/giangveso0-ctrl/RobloxOnDiscord-Test/main/bridge.lua"))()
 
 
 
-5. BẢNG TRA CỨU LỆNH (CHỈ DÙNG TẠI KÊNH #DEBUG)
+5. BẢNG TRA CỨU LỆNH DISCORD (CHỈ HOẠT ĐỘNG TẠI KÊNH `#debug`)
 
 --------------------------------------------------------------------------------
 
-- /inject : Kiểm tra tiến trình RobloxPlayerBeta.exe và WebSocket (Xanh/Đỏ).
+- /inject : Quét tiến trình `RobloxPlayerBeta.exe`, kiểm tra PID và trạng thái kết 
 
-- /exec   : Gửi chuỗi Lua trực tiếp hoặc tải file .lua / .txt (tối đa 2MB).
+            nối WebSocket thực tế (🟢 Đã kết nối / 🔴 Mất kết nối).
 
-- /human  : Tương tác trực tiếp với đối tượng Humanoid của nhân vật.
+- /exec   : Gửi chuỗi mã Lua trực tiếp hoặc tải file đính kèm `.lua` / `.txt` 
 
-- /fly    : Bật vòng lặp BodyVelocity và BodyGyro bám theo hướng nhìn camera.
+            (tối đa 2MB) để thực thi trong game.
 
-- /unfly  : Dọn dẹp instance bay, khôi phục vật lý nhân vật bình thường.
+- /human  : Tương tác trực tiếp với đối tượng `Humanoid` của nhân vật để thay đổi 
 
-- /speed  : Ghi đè trực tiếp giá trị Humanoid.WalkSpeed kèm kiểm tra an toàn.
+            thông số vật lý, tốc độ chạy hoặc sức nhảy theo thời gian thực.
 
-- /esp    : Tạo Highlight trên người chơi và xóa sạch 100% khi tắt (false).
+- /fly    : Kích hoạt vòng lặp vật lý `BodyVelocity` và `BodyGyro` bám theo góc nhìn 
 
-- /status : Hiển thị thống kê client kết nối và độ trễ mạng.
+            camera (`workspace.CurrentCamera`) giúp bay mượt mà 3 chiều.
+
+- /unfly  : Dọn dẹp an toàn các instance bay, khôi phục `PlatformStand` và đưa nhân 
+
+            vật về trạng thái vật lý mặc định.
+
+- /speed  : Ghi đè trực tiếp thuộc tính `Humanoid.WalkSpeed` kèm kiểm tra giới hạn.
+
+- /esp    : Tạo các khối `Highlight` trên toàn bộ người chơi và **xóa sạch 100%** 
+
+            khỏi bộ nhớ khi chuyển trạng thái sang `false`.
+
+- /status : Hiển thị số lượng client WebSocket đang kết nối và thông số độ trễ mạng.
 
 
 
-6. HƯỚNG DẪN CHUYÊN SÂU: SỬ DỤNG LỆNH API /HUMAN
+6. HƯỚNG DẪN CHUYÊN SÂU: SỬ DỤNG LỆNH API `/HUMAN`
 
 --------------------------------------------------------------------------------
 
-Lệnh /human cung cấp khả năng điều khiển chi tiết thuộc tính lớp Humanoid.
+Lệnh `/human` cung cấp khả năng điều khiển chi tiết thuộc tính của lớp `Humanoid` 
+
+trên nhân vật Roblox của bạn.
 
 
 
-- Cú pháp chuẩn:
+- Cú pháp lệnh chuẩn:
 
-  /human property:<Tên_Thuộc_Tính> value:<Giá_Trị_Số>
+  `/human property:<Tên_Thuộc_Tính> value:<Giá_Trị_Số>`
 
 
 
 - Các thuộc tính hỗ trợ & Ví dụ thực tế:
 
-  * WalkSpeed : Thay đổi tốc độ di chuyển -> /human WalkSpeed 120
+  * WalkSpeed : Điều chỉnh tốc độ di chuyển -> `/human WalkSpeed 125`
 
-  * JumpPower : Tăng sức nhảy dọc -> /human JumpPower 200
+  * JumpPower : Điều chỉnh sức bật nhảy dọc -> `/human JumpPower 250`
 
-  * HipHeight : Chỉnh độ cao khoảng cách hông so với mặt đất -> /human HipHeight 4
+  * HipHeight : Chỉnh độ cao khoảng cách hông so với mặt đất -> `/human HipHeight 6`
 
-  * Health    : Quản lý chỉ số máu nhân vật -> /human Health 50
+  * Health    : Quản lý chỉ số điểm máu nhân vật -> `/human Health 100`
 
 
 
