@@ -1,8 +1,12 @@
 # RobloxOnDiscord-Test
 
-Control your own Roblox client from a Discord channel. A Python bot receives slash commands and forwards them over a local WebSocket to a Lua bridge script running inside Roblox.
+ 
+ **It's Videccode and takes the idea from @vaehz.** Thanks for downloading this project! It is a small test project, so expect rough edges. If you share or modify it, please keep these credits.
 
+ 
 🇬🇧 English · [🇻🇳 Tiếng Việt](#-tiếng-việt)
+
+Control your own Roblox client from a Discord channel. A Python bot receives slash commands and forwards them over a local WebSocket to a Lua bridge script running inside Roblox.
 
 > [!WARNING]
 > This project runs scripts through a third-party Roblox executor. Using executors violates the Roblox Terms of Use and **can get your account banned**. Use it only in a test environment, at your own risk, and never share your bot token.
@@ -125,10 +129,12 @@ This is a test project, provided as is, with no warranty. It is not affiliated w
 
 # 🇻🇳 Tiếng Việt
 
-Điều khiển client Roblox của chính bạn từ một kênh Discord. Bot Python nhận slash command rồi chuyển qua WebSocket cục bộ tới script Lua đang chạy trong Roblox.
+**Đây là Videccode và lấy ý tưởng từ @vaehz.** Cảm ơn bạn đã tải dự án này! Đây là dự án thử nghiệm nhỏ nên có thể còn thiếu sót. Nếu bạn chia sẻ hoặc chỉnh sửa, vui lòng giữ lại phần ghi công này.
 
 > [!WARNING]
 > Dự án chạy script thông qua executor của bên thứ ba. Việc dùng executor vi phạm Điều khoản sử dụng của Roblox và **có thể khiến tài khoản bị khóa**. Chỉ dùng để thử nghiệm, tự chịu rủi ro, và không bao giờ chia sẻ token bot.
+>
+> Điều khiển client Roblox của chính bạn từ một kênh Discord. Bot Python nhận slash command rồi chuyển qua WebSocket cục bộ tới script Lua đang chạy trong Roblox.
 
 ## Cách hoạt động
 
