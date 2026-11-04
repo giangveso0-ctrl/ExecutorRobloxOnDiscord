@@ -48,6 +48,15 @@ Discord (#debug)  ──►  bot.py (Python)  ──ws://localhost:8765──►
 - A **Discord bot token** from the [Discord Developer Portal](https://discord.com/developers/applications)
 - A Roblox executor that supports `WebSocket.connect`
 
+Setup & How to Create a Discord Bot
+
+        Create a Discord Bot:
+        Go to the Discord Developer Portal and click "New Application".
+        Navigate to the "Bot" tab on the left sidebar.
+        Under "Privileged Gateway Intents", enable "Message Content Intent".
+        Click Reset Token to generate your bot token.
+        Go to OAuth2 > URL Generator, select bot and applications.commands scopes, and check Administrator permissions. Open the generated link to invite the bot to your server.
+
 ## Installation
 
 ```bash
@@ -160,6 +169,16 @@ Discord (#debug)  ──►  bot.py (Python)  ──ws://localhost:8765──►
 - **Python 3.8+**, nhớ tích *Add Python to PATH* khi cài
 - **Token bot Discord** từ [Discord Developer Portal](https://discord.com/developers/applications)
 - Executor Roblox hỗ trợ `WebSocket.connect`
+
+Thiết lập & Hướng dẫn tạo Bot Discord
+
+    Cách tạo Bot Discord:
+        Truy cập Discord Developer Portal và bấm "New Application".
+        Vào mục "Bot" ở menu bên trái.
+        Tại phần "Privileged Gateway Intents", bật tùy chọn "Message Content Intent".
+        Bấm Reset Token để lấy mã token của bot.
+        Chuyển sang mục OAuth2 > URL Generator, tích chọn bot và applications.commands, đồng thời chọn quyền Administrator. Copy đường dẫn đó mở lên trình duyệt để mời bot vào server của bạn.
+
 
 ## Cài đặt
 
