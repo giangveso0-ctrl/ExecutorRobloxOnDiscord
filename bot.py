@@ -13,7 +13,7 @@ from discord import app_commands
 # ==============================================================================
 # 🔑 CONFIGURATION / CẤU HÌNH BOT
 # ==============================================================================
-DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
+DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"  # Thay token của bạn vào đây
 GITHUB_RAW_SCRIPT = "https://raw.githubusercontent.com/giangveso0-ctrl/RobloxOnDiscord-Test/main/bridge.lua"
 REPO_URL = "https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test"
 WS_HOST = "localhost"
@@ -72,7 +72,7 @@ def log(level: str, message: str) -> None:
 def print_banner() -> None:
     lines = [
         "╔══════════════════════════════════════════════════╗",
-        "║        ⚡  ROBLOX  ON  DISCORD  BRIDGE  ⚡       ║",
+        "║        ⚡  ROBLOX  ON  DISCORD  BRIDGE  ⚡        ║",
         "║          WebSocket Remote Command Hub            ║",
         "╚══════════════════════════════════════════════════╝",
     ]
@@ -200,7 +200,6 @@ def build_help_embed() -> discord.Embed:
     embed.add_field(
         name="📜 Lệnh Tiền Tố / Prefix Commands (`!` hoặc `.`)",
         value=(
-            "`!inject` — Kiểm tra trạng thái / Check status\n"
             "`!exec <script>` — Chạy script dài hoặc file đính kèm / Long scripts & files\n"
             "`!status` — Xem kết nối / View connections"
         ),
@@ -269,7 +268,6 @@ async def on_ready():
     except Exception as e:
         log("error", f"Sync error: {e}")
 
-    # on_ready can fire more than once; only start the WebSocket server a single time
     if not _ws_started:
         _ws_started = True
         bot.loop.create_task(start_websocket_server())
@@ -333,13 +331,6 @@ async def legacy_help(ctx):
     await ctx.send(embed=build_help_embed())
 
 
-@bot.command(name="inject")
-async def legacy_inject(ctx):
-    if ctx.channel.name != DEBUG_CHANNEL:
-        return await ctx.send(embed=wrong_channel_embed())
-    await ctx.send(embed=build_status_embed(show_loadstring=True))
-
-
 @bot.command(name="status")
 async def legacy_status(ctx):
     if ctx.channel.name != DEBUG_CHANNEL:
@@ -369,7 +360,9 @@ async def legacy_exec(ctx, *, script_code: str = None):
             "Please provide script code or attach a file!",
             Colour.WARNING))
 
-    if await send_to_roblox(script_code):
+    wrapped_code = f"pcall(function()\n{script_code}\nend)"
+
+    if await send_to_roblox(wrapped_code):
         embed = make_embed(
             "⚡ LONG SCRIPT EXECUTED",
             "Đã gửi script dài tới Roblox thành công!\nScript sent to Roblox successfully!",
@@ -382,7 +375,7 @@ async def legacy_exec(ctx, *, script_code: str = None):
 
 
 # ==============================================================================
-# ⚡ SLASH COMMANDS (Tính năng nâng cao, Rscripts/ScriptBlox, ESP, FPS Boost, Credits)
+# ⚡ SLASH COMMANDS
 # ==============================================================================
 
 @bot.tree.command(name="help", description="Xem danh sách lệnh / Show all commands")
@@ -405,7 +398,9 @@ async def slash_exec(interaction: discord.Interaction, code: str):
             "⚠️ Thiếu mã / Missing code", "Vui lòng nhập mã lệnh Lua! / Please enter Lua code!",
             Colour.WARNING), ephemeral=True)
 
-    if await send_to_roblox(code):
+    wrapped_code = f"pcall(function()\n{code}\nend)"
+
+    if await send_to_roblox(wrapped_code):
         embed = make_embed(
             "⚡ QUICK EXEC",
             "Đã gửi thành công!\nSent successfully!",
@@ -425,9 +420,9 @@ async def slash_exec(interaction: discord.Interaction, code: str):
 async def slash_findscript(interaction: discord.Interaction, source: str, keyword: str):
     query = quote_plus(keyword)
     if source == "rscripts":
-        site, url, colour = "Rscripts", f"https://rscripts.net/?q={query}", Colour.PURPLE
+        site, url, colour = "Rscripts", f"https://rscripts.net/scripts?search={query}", Colour.PURPLE
     else:
-        site, url, colour = "ScriptBlox", f"https://scriptblox.com/search?q={query}", Colour.INFO
+        site, url, colour = "ScriptBlox", f"https://scriptblox.com/?q={query}", Colour.INFO
 
     embed = make_embed(f"🌐 Kết quả tìm kiếm từ {site}", f"Từ khóa / Keyword: **{keyword}**", colour)
     embed.add_field(name="🔗 Link tra cứu trực tiếp",
@@ -444,8 +439,9 @@ async def slash_findscript(interaction: discord.Interaction, source: str, keywor
 async def slash_esp(interaction: discord.Interaction):
     script = """
     pcall(function()
-        for _, plr in ipairs(game.Players:GetPlayers()) do
-            if plr ~= game.Players.LocalPlayer then
+        local Players = game:GetService("Players")
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= Players.LocalPlayer then
                 local char = plr.Character
                 if char and not char:FindFirstChild("DiscordESP") then
                     local highlight = Instance.new("Highlight")
@@ -491,64 +487,140 @@ async def slash_fpsboost(interaction: discord.Interaction):
                       colour=Colour.TEAL)
 
 
-@bot.tree.command(name="fly", description="Bật chế độ bay mượt mà / Enable smooth flight mode")
+@bot.tree.command(name="fly", description="Bật chế độ bay chuẩn Infinite Yield / Enable Infinite Yield Fly mode")
 @is_debug_channel()
 async def slash_fly(interaction: discord.Interaction):
     script = """
     pcall(function()
-        if _G.FlyLoop then _G.FlyLoop:Disconnect() end
-        local plr = game.Players.LocalPlayer
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then return end
-        local camera = workspace.CurrentCamera
-        hum.PlatformStand = true
-        local bg = hrp:FindFirstChild("FlyBG") or Instance.new("BodyGyro", hrp)
-        bg.Name = "FlyBG" bg.P = 9e4 bg.maxTorque = Vector3.new(9e9, 9e9, 9e9) bg.cframe = hrp.CFrame
-        local bv = hrp:FindFirstChild("FlyBV") or Instance.new("BodyVelocity", hrp)
-        bv.Name = "FlyBV" bv.maxForce = Vector3.new(9e9, 9e9, 9e9) bv.velocity = Vector3.zero
-        _G.FlyLoop = game:GetService("RunService").RenderStepped:Connect(function()
-            if not char or not hrp or not hum.PlatformStand then if _G.FlyLoop then _G.FlyLoop:Disconnect() end return end
-            bg.cframe = camera.CFrame
-            local moveDir = hum.MoveDirection
-            if moveDir.Magnitude > 0 then
-                bv.velocity = camera.CFrame:VectorToWorldSpace(camera.CFrame:VectorToObjectSpace(CFrame.new(Vector3.zero, camera.CFrame.LookVector):VectorToObjectSpace(moveDir)) * 50)
-            else
-                bv.velocity = Vector3.zero
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local UserInputService = game:GetService("UserInputService")
+        local Workspace = game:GetService("Workspace")
+
+        if _G.IYNOFLY then _G.IYNOFLY() end
+
+        _G.FLYING = true
+        local iyflyspeed = 1
+        local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+        local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+        local SPEED = 0
+
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local torso = char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if not torso or not humanoid then return end
+
+        local BG = Instance.new("BodyGyro")
+        local BV = Instance.new("BodyVelocity")
+        
+        BG.Name = "IY_BodyGyro"
+        BG.P = 9e4
+        BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BG.cframe = torso.CFrame
+        BG.Parent = torso
+
+        BV.Name = "IY_BodyVelocity"
+        BV.velocity = Vector3.new(0, 0, 0)
+        BV.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        BV.Parent = torso
+
+        humanoid.PlatformStand = true
+
+        local flyKeyDown = UserInputService.InputBegan:Connect(function(input, gpe)
+            if gpe then return end
+            if input.KeyCode == Enum.KeyCode.W then CONTROL.F = iyflyspeed
+            elseif input.KeyCode == Enum.KeyCode.S then CONTROL.B = -iyflyspeed
+            elseif input.KeyCode == Enum.KeyCode.A then CONTROL.L = -iyflyspeed
+            elseif input.KeyCode == Enum.KeyCode.D then CONTROL.R = iyflyspeed
+            elseif input.KeyCode == Enum.KeyCode.E then CONTROL.Q = iyflyspeed*2
+            elseif input.KeyCode == Enum.KeyCode.Q then CONTROL.E = -iyflyspeed*2
             end
+        end)
+
+        local flyKeyUp = UserInputService.InputEnded:Connect(function(input, gpe)
+            if gpe then return end
+            if input.KeyCode == Enum.KeyCode.W then CONTROL.F = 0
+            elseif input.KeyCode == Enum.KeyCode.S then CONTROL.B = 0
+            elseif input.KeyCode == Enum.KeyCode.A then CONTROL.L = 0
+            elseif input.KeyCode == Enum.KeyCode.D then CONTROL.R = 0
+            elseif input.KeyCode == Enum.KeyCode.E then CONTROL.Q = 0
+            elseif input.KeyCode == Enum.KeyCode.Q then CONTROL.E = 0
+            end
+        end)
+
+        _G.IYNOFLY = function()
+            _G.FLYING = false
+            if flyKeyDown then flyKeyDown:Disconnect() end
+            if flyKeyUp then flyKeyUp:Disconnect() end
+            if _G.FlyLoopConn then _G.FlyLoopConn:Disconnect() end
+            
+            local c = LocalPlayer.Character
+            if c then
+                local hum = c:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
+                local root = c:FindFirstChild("Torso") or c:FindFirstChild("HumanoidRootPart")
+                if root then
+                    if root:FindFirstChild("IY_BodyGyro") then root.IY_BodyGyro:Destroy() end
+                    if root:FindFirstChild("IY_BodyVelocity") then root.IY_BodyVelocity:Destroy() end
+                end
+            end
+        end
+
+        _G.FlyLoopConn = game:GetService("RunService").RenderStepped:Connect(function()
+            if not _G.FLYING then return end
+            
+            if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+                SPEED = 50
+            elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+                SPEED = 0
+            end
+            
+            if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
+                BV.velocity = ((Workspace.CurrentCamera.CFrame.LookVector * (CONTROL.F + CONTROL.B)) + ((Workspace.CurrentCamera.CFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - Workspace.CurrentCamera.CFrame.p)) * SPEED
+                lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R, Q = CONTROL.Q, E = CONTROL.E}
+            elseif SPEED ~= 0 then
+                BV.velocity = ((Workspace.CurrentCamera.CFrame.LookVector * (lCONTROL.F + lCONTROL.B)) + ((Workspace.CurrentCamera.CFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + lCONTROL.Q + lCONTROL.E) * 0.2, 0).p) - Workspace.CurrentCamera.CFrame.p)) * SPEED
+            else
+                BV.velocity = Vector3.new(0, 0, 0)
+            end
+            
+            BG.cframe = Workspace.CurrentCamera.CFrame
         end)
     end)
     """
     await run_feature(interaction, script,
-                      title="✈️ FLY MODE ENABLED",
-                      description="Đã bật **Fly Mode**!\nFlight enabled — use `/unfly` to stop.",
+                      title="✈️ FLY ENABLED (Infinite Yield Core)",
+                      description="Đã bật **Fly Mode chuẩn Infinite Yield**!\nSử dụng WASD + Q/E để di chuyển.",
                       colour=Colour.INFO)
 
 
-@bot.tree.command(name="unfly", description="Tắt chế độ bay và khôi phục vật lý / Disable flight & restore physics")
+@bot.tree.command(name="unfly", description="Tắt chế độ bay Infinite Yield / Disable Fly mode")
 @is_debug_channel()
 async def slash_unfly(interaction: discord.Interaction):
     script = """
     pcall(function()
-        if _G.FlyLoop then _G.FlyLoop:Disconnect() _G.FlyLoop = nil end
-        local plr = game.Players.LocalPlayer
-        local char = plr.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hum then hum.PlatformStand = false end
-            if hrp then
-                if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
-                if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+        if _G.IYNOFLY then
+            _G.IYNOFLY()
+            _G.IYNOFLY = nil
+        else
+            local LocalPlayer = game:GetService("Players").LocalPlayer
+            local char = LocalPlayer.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local root = char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+                if hum then hum.PlatformStand = false end
+                if root then
+                    if root:FindFirstChild("IY_BodyGyro") then root.IY_BodyGyro:Destroy() end
+                    if root:FindFirstChild("IY_BodyVelocity") then root.IY_BodyVelocity:Destroy() end
+                end
             end
         end
     end)
     """
     await send_to_roblox(script)
     await interaction.response.send_message(embed=make_embed(
-        "🛑 FLY MODE DISABLED",
-        "Đã tắt **Fly Mode**!\nFlight disabled, physics restored.",
+        "🛑 FLY DISABLED",
+        "Đã tắt **Fly Mode** và khôi phục vật lý ban đầu!",
         Colour.ERROR), ephemeral=True)
 
 
@@ -557,12 +629,14 @@ async def slash_unfly(interaction: discord.Interaction):
 async def slash_clicktotp(interaction: discord.Interaction):
     script = """
     pcall(function()
-        local mouse = game.Players.LocalPlayer:GetMouse()
+        local plr = game:GetService("Players").LocalPlayer
+        local mouse = plr:GetMouse()
         local uis = game:GetService("UserInputService")
         if _G.ClickTPConn then _G.ClickTPConn:Disconnect() end
+        
         _G.ClickTPConn = mouse.Button1Down:Connect(function()
             if uis:IsKeyDown(Enum.KeyCode.LeftControl) or uis:IsKeyDown(Enum.KeyCode.RightControl) then
-                local char = game.Players.LocalPlayer.Character
+                local char = plr.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
                     if mouse.Target then
                         char.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
@@ -585,7 +659,7 @@ async def slash_autoheal(interaction: discord.Interaction):
     pcall(function()
         if _G.AutoHealConn then _G.AutoHealConn:Disconnect() end
         _G.AutoHealConn = game:GetService("RunService").Stepped:Connect(function()
-            local char = game.Players.LocalPlayer.Character
+            local char = game:GetService("Players").LocalPlayer.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
