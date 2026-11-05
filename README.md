@@ -39,7 +39,7 @@ Slash commands, a button panel inside Discord, and a desktop control window.
 ## Overview
 
 ```
- Discord #debug ──── slash command / button ────▶  bot.py  ◀──── WebSocket ────▶  bridge.lua
+ Discord  ──── slash command / button ────▶  bot.py  ◀──── WebSocket ────▶  bridge.lua
  (you)                                              │          ws://localhost:8765   (inside Roblox,
                                                     │                                 via an executor)
                                          gui.py ────┘ start · stop · logs
