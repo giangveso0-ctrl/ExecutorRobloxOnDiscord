@@ -91,7 +91,8 @@ Give the bot your token in **one** of these ways:
 
 | Option | How |
 | --- | --- |
-| `token.txt` (easiest) | Create a file named `token.txt` next to `bot.py` and paste only the token into it. |
+| Paste it when asked (easiest) | Just run `bot.py` (or `start.bat`). With no token saved, the console asks you to paste it, then offers to save it to `token.txt` and adds that file to `.gitignore` for you. |
+| `token.txt` | Create a file named `token.txt` next to `bot.py` and paste only the token into it. |
 | Edit `bot.py` | Replace `PASTE_YOUR_BOT_TOKEN_HERE` in `DISCORD_BOT_TOKEN = "..."` with your token. |
 | Environment variable | Set `DISCORD_BOT_TOKEN` before running the bot. |
 
@@ -157,7 +158,7 @@ The `[on/off]` commands default to **on**. Example: `/esp state:OFF`.
 | Problem | Fix |
 | --- | --- |
 | Slash commands don't show up | Re-invite the bot with the `applications.commands` scope, wait a minute, then refresh Discord with `Ctrl + R`. |
-| Bot is offline or console says invalid token | A wrong or reset token causes a login failure. Paste a fresh token into `token.txt` (or `bot.py`). |
+| Bot is offline or console says invalid token | A wrong or reset token causes a login failure. The bot offers to delete the saved `token.txt`, then run it again and paste a fresh token. |
 | Console says `Used disallowed intents` | In the Developer Portal → **Bot**, turn on **Message Content Intent** and save. |
 | `/inject` says DISCONNECTED | Start `bot.py` first, then run `bridge.lua`. Make sure nothing else uses port `8765` and your firewall allows local connections. |
 | "Missing Access" or no reply | Give the bot permission to view and send messages in `#debug`. |
@@ -269,7 +270,8 @@ pip install -U discord.py websockets psutil
 
 | Cách | Thực hiện |
 | --- | --- |
-| `token.txt` (dễ nhất) | Tạo file `token.txt` cạnh `bot.py` và chỉ dán token vào trong đó. |
+| Dán khi được hỏi (dễ nhất) | Chỉ cần chạy `bot.py` (hoặc `start.bat`). Khi chưa có token, console sẽ yêu cầu bạn dán token, rồi hỏi có muốn lưu vào `token.txt` không và tự thêm file đó vào `.gitignore`. |
+| `token.txt` | Tạo file `token.txt` cạnh `bot.py` và chỉ dán token vào trong đó. |
 | Sửa `bot.py` | Thay `PASTE_YOUR_BOT_TOKEN_HERE` trong `DISCORD_BOT_TOKEN = "..."` bằng token của bạn. |
 | Biến môi trường | Đặt `DISCORD_BOT_TOKEN` trước khi chạy bot. |
 
@@ -335,7 +337,7 @@ Các lệnh có `[on/off]` mặc định là **bật**. Ví dụ: `/esp state:OF
 | Vấn đề | Cách xử lý |
 | --- | --- |
 | Không thấy slash command | Mời lại bot với scope `applications.commands`, đợi một phút rồi tải lại Discord bằng `Ctrl + R`. |
-| Bot ngoại tuyến hoặc console báo token không hợp lệ | Token sai hoặc đã bị reset sẽ khiến đăng nhập thất bại. Hãy dán token mới vào `token.txt` (hoặc `bot.py`). |
+| Bot ngoại tuyến hoặc console báo token không hợp lệ | Token sai hoặc đã bị reset sẽ khiến đăng nhập thất bại. Bot sẽ hỏi có xóa `token.txt` đã lưu không, sau đó hãy chạy lại và dán token mới. |
 | Console báo `Used disallowed intents` | Trong Developer Portal → **Bot**, bật **Message Content Intent** rồi lưu lại. |
 | `/inject` báo DISCONNECTED | Chạy `bot.py` trước, rồi mới chạy `bridge.lua`. Đảm bảo không có chương trình nào khác dùng cổng `8765` và firewall cho phép kết nối cục bộ. |
 | "Missing Access" hoặc bot không trả lời | Cấp cho bot quyền xem và gửi tin nhắn trong `#debug`. |
