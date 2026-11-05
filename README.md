@@ -1,6 +1,6 @@
 <div align="center">
 
-# RobloxOnDiscord-Test
+# ExecutorOnDiscord
 
 **Control a Roblox client from Discord with slash commands.**
 
