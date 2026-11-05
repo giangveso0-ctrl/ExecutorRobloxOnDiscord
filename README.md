@@ -37,7 +37,7 @@ Discord (#debug)  ──slash command──▶  bot.py  ◀──WebSocket (ws:/
 
 | File | Description |
 | --- | --- |
-| `bot.py` | The Discord bot, slash commands, `psutil` process check and the WebSocket server. |
+| `bot.py` | The Discord bot, slash and prefix commands, `psutil` process check and the WebSocket server. |
 | `bridge.lua` | Client script: connects to the bot, shows `StarterGui` notifications, runs received code with `loadstring()`. |
 | `start.bat` | Windows shortcut that launches the bot. |
 
@@ -56,7 +56,7 @@ Discord (#debug)  ──slash command──▶  bot.py  ◀──WebSocket (ws:/
 2. Click **New Application**, enter a name (for example `RobloxOnDiscord`) and accept the terms.
 3. In the left menu, open **Bot**.
 4. Click **Reset Token**, confirm, then **Copy** the token and keep it somewhere safe. Discord only shows it once. If you lose it, just reset it again.
-5. On the same page, under **Privileged Gateway Intents**, leave everything off. Slash commands don't need them (turn on **Message Content Intent** only if you later edit `bot.py` to read messages).
+5. On the same page, scroll to **Privileged Gateway Intents** and turn **ON** **Message Content Intent**, then click **Save Changes**. The `!exec` command needs it to read your messages. Without it the bot refuses to start.
 
 > **Treat the token like a password.** Anyone who has it can control your bot. Never post it or commit it to GitHub. If it leaks, reset it immediately.
 
@@ -84,16 +84,20 @@ You need the **Manage Server** permission on the server you are adding it to (or
 ```bash
 git clone https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test.git
 cd RobloxOnDiscord-Test
-pip install discord.py websockets psutil
+pip install -U discord.py websockets psutil
 ```
 
-Open `bot.py` in a text editor and paste your token:
+Give the bot your token in **one** of these ways:
 
-```python
-DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
-```
+| Option | How |
+| --- | --- |
+| `token.txt` (easiest) | Create a file named `token.txt` next to `bot.py` and paste only the token into it. |
+| Edit `bot.py` | Replace `PASTE_YOUR_BOT_TOKEN_HERE` in `DISCORD_BOT_TOKEN = "..."` with your token. |
+| Environment variable | Set `DISCORD_BOT_TOKEN` before running the bot. |
 
-Save the file. Don't upload `bot.py` to GitHub with your real token inside.
+A real token has three parts separated by dots, like `XXXXXXXXXXXXXXXXXXXXXXXX.XXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXX`. Don't upload `bot.py` or `token.txt` to GitHub with your real token inside (add `token.txt` to `.gitignore`).
+
+**Optional:** to stop other people in `#debug` from running code on your PC, put your Discord user ID in `ALLOWED_USER_IDS` at the top of `bot.py`, for example `ALLOWED_USER_IDS = [123456789012345678]`. Leave it empty to allow everyone in the channel.
 
 ## Step 4: Run it
 
@@ -123,29 +127,38 @@ Save the file. Don't upload `bot.py` to GitHub with your real token inside.
 
 All commands only work in `#debug`.
 
+**Slash commands**
+
 | Command | Description |
 | --- | --- |
-| `/inject` | Checks for `RobloxPlayerBeta.exe` and shows the WebSocket state. |
-| `/exec` | Sends a Lua string, or an uploaded `.lua` / `.txt` file (max 2 MB), to the game. |
-| `/human` | Sets a Humanoid property: `WalkSpeed`, `JumpPower`, `HipHeight` or `Health`. |
-| `/fly` | Starts flying using `BodyVelocity` / `BodyGyro` in the camera direction. |
-| `/unfly` | Stops flying and restores normal physics. |
-| `/speed` | Sets `Humanoid.WalkSpeed` (validated). |
-| `/esp` | Toggles `Highlight` outlines on players. |
-| `/status` | Shows connected clients and connection diagnostics. |
+| `/help` | Shows all commands. |
+| `/inject` | Checks for `RobloxPlayerBeta.exe`, shows the WebSocket state and the loadstring to run. |
+| `/status` | Shows Roblox / WebSocket state, latency and uptime. |
+| `/exec <code>` | Runs a short Lua snippet in the game. Syntax and runtime errors are reported in the Roblox console. |
+| `/findscript <source> <keyword>` | Gives a search link on Rscripts or ScriptBlox. |
+| `/esp [on/off]` | Player `Highlight` outlines. Also covers new players and respawns. |
+| `/fly` / `/unfly` | Flight with WASD + Q/E (down/up). |
+| `/clicktotp [on/off]` | Hold `Ctrl` and click to teleport. |
+| `/autoheal [on/off]` | Keeps your health full. |
+| `/fpsboost` | Lowers graphics quality for more FPS. |
+| `/cre` | Credits. |
 
-Example:
+**Prefix commands** (`!` or `.`)
 
-```
-/human property:WalkSpeed value:120
-```
+| Command | Description |
+| --- | --- |
+| `!exec <script>` | For long scripts. You can paste a ` ```lua ` code block or attach a `.lua` / `.txt` file (max 2 MB). |
+| `!help` | Shows the help embed. |
+
+The `[on/off]` commands default to **on**. Example: `/esp state:OFF`.
 
 ## Troubleshooting
 
 | Problem | Fix |
 | --- | --- |
 | Slash commands don't show up | Re-invite the bot with the `applications.commands` scope, wait a minute, then refresh Discord with `Ctrl + R`. |
-| Bot is offline | Check the console for errors. A wrong or reset token causes a login failure, so paste a fresh token into `bot.py`. |
+| Bot is offline or console says invalid token | A wrong or reset token causes a login failure. Paste a fresh token into `token.txt` (or `bot.py`). |
+| Console says `Used disallowed intents` | In the Developer Portal → **Bot**, turn on **Message Content Intent** and save. |
 | `/inject` says DISCONNECTED | Start `bot.py` first, then run `bridge.lua`. Make sure nothing else uses port `8765` and your firewall allows local connections. |
 | "Missing Access" or no reply | Give the bot permission to view and send messages in `#debug`. |
 | `WebSocket` is nil in Roblox | Your executor doesn't support `WebSocket.connect`. Try another one. |
@@ -202,7 +215,7 @@ Discord (#debug)  ──slash command──▶  bot.py  ◀──WebSocket (ws:/
 
 | Tệp | Mô tả |
 | --- | --- |
-| `bot.py` | Bot Discord, slash command, kiểm tra tiến trình bằng `psutil` và máy chủ WebSocket. |
+| `bot.py` | Bot Discord, slash command và lệnh tiền tố, kiểm tra tiến trình bằng `psutil` và máy chủ WebSocket. |
 | `bridge.lua` | Script phía client: kết nối tới bot, hiện thông báo `StarterGui`, chạy mã nhận được bằng `loadstring()`. |
 | `start.bat` | File Windows để khởi động bot nhanh. |
 
@@ -221,7 +234,7 @@ Discord (#debug)  ──slash command──▶  bot.py  ◀──WebSocket (ws:/
 2. Nhấn **New Application**, đặt tên (ví dụ `RobloxOnDiscord`) và đồng ý điều khoản.
 3. Ở menu bên trái, mở **Bot**.
 4. Nhấn **Reset Token**, xác nhận, rồi nhấn **Copy** và lưu token ở nơi an toàn. Discord chỉ hiện token một lần. Nếu mất, chỉ cần reset lại.
-5. Trên cùng trang, ở mục **Privileged Gateway Intents**, để tắt hết. Slash command không cần các intent này (chỉ bật **Message Content Intent** nếu sau này bạn sửa `bot.py` để đọc tin nhắn).
+5. Trên cùng trang, kéo xuống **Privileged Gateway Intents** và **BẬT** **Message Content Intent**, rồi nhấn **Save Changes**. Lệnh `!exec` cần quyền này để đọc tin nhắn. Nếu không bật, bot sẽ không khởi động được.
 
 > **Hãy coi token như mật khẩu.** Ai có token đều điều khiển được bot của bạn. Không đăng công khai hoặc commit lên GitHub. Nếu bị lộ, hãy reset ngay.
 
@@ -249,16 +262,20 @@ Bạn cần quyền **Manage Server** trên server muốn thêm bot (hoặc là 
 ```bash
 git clone https://github.com/giangveso0-ctrl/RobloxOnDiscord-Test.git
 cd RobloxOnDiscord-Test
-pip install discord.py websockets psutil
+pip install -U discord.py websockets psutil
 ```
 
-Mở `bot.py` bằng trình soạn thảo văn bản và dán token của bạn:
+Đưa token cho bot theo **một** trong các cách sau:
 
-```python
-DISCORD_BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN_HERE"
-```
+| Cách | Thực hiện |
+| --- | --- |
+| `token.txt` (dễ nhất) | Tạo file `token.txt` cạnh `bot.py` và chỉ dán token vào trong đó. |
+| Sửa `bot.py` | Thay `PASTE_YOUR_BOT_TOKEN_HERE` trong `DISCORD_BOT_TOKEN = "..."` bằng token của bạn. |
+| Biến môi trường | Đặt `DISCORD_BOT_TOKEN` trước khi chạy bot. |
 
-Lưu file lại. Không tải `bot.py` lên GitHub khi bên trong có token thật.
+Token thật gồm ba phần cách nhau bởi dấu chấm, ví dụ `XXXXXXXXXXXXXXXXXXXXXXXX.XXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXX`. Không tải `bot.py` hoặc `token.txt` lên GitHub khi bên trong có token thật (hãy thêm `token.txt` vào `.gitignore`).
+
+**Tùy chọn:** để người khác trong `#debug` không chạy được mã trên máy bạn, điền ID Discord của bạn vào `ALLOWED_USER_IDS` ở đầu `bot.py`, ví dụ `ALLOWED_USER_IDS = [123456789012345678]`. Để trống nếu muốn cho mọi người trong kênh dùng.
 
 ## Bước 4: Chạy
 
@@ -288,29 +305,38 @@ Lưu file lại. Không tải `bot.py` lên GitHub khi bên trong có token th�
 
 Tất cả lệnh chỉ dùng được trong `#debug`.
 
+**Slash command**
+
 | Lệnh | Mô tả |
 | --- | --- |
-| `/inject` | Kiểm tra `RobloxPlayerBeta.exe` và trạng thái WebSocket. |
-| `/exec` | Gửi chuỗi Lua, hoặc tệp `.lua` / `.txt` tải lên (tối đa 2 MB), vào game. |
-| `/human` | Đặt thuộc tính Humanoid: `WalkSpeed`, `JumpPower`, `HipHeight` hoặc `Health`. |
-| `/fly` | Bắt đầu bay bằng `BodyVelocity` / `BodyGyro` theo hướng camera. |
-| `/unfly` | Dừng bay và khôi phục vật lý bình thường. |
-| `/speed` | Đặt `Humanoid.WalkSpeed` (có kiểm tra giá trị). |
-| `/esp` | Bật/tắt viền `Highlight` trên người chơi. |
-| `/status` | Hiển thị các client đang kết nối và thông tin chẩn đoán. |
+| `/help` | Hiển thị tất cả lệnh. |
+| `/inject` | Kiểm tra `RobloxPlayerBeta.exe`, trạng thái WebSocket và loadstring cần chạy. |
+| `/status` | Hiển thị trạng thái Roblox / WebSocket, độ trễ và thời gian hoạt động. |
+| `/exec <code>` | Chạy đoạn Lua ngắn trong game. Lỗi cú pháp và lỗi khi chạy sẽ được báo trong console Roblox. |
+| `/findscript <source> <keyword>` | Cho link tìm kiếm trên Rscripts hoặc ScriptBlox. |
+| `/esp [on/off]` | Viền `Highlight` người chơi. Tự cập nhật người mới và khi hồi sinh. |
+| `/fly` / `/unfly` | Bay bằng WASD + Q/E (xuống/lên). |
+| `/clicktotp [on/off]` | Giữ `Ctrl` và click để dịch chuyển. |
+| `/autoheal [on/off]` | Giữ máu luôn đầy. |
+| `/fpsboost` | Giảm chất lượng đồ họa để tăng FPS. |
+| `/cre` | Thông tin tác giả. |
 
-Ví dụ:
+**Lệnh tiền tố** (`!` hoặc `.`)
 
-```
-/human property:WalkSpeed value:120
-```
+| Lệnh | Mô tả |
+| --- | --- |
+| `!exec <script>` | Dùng cho script dài. Có thể dán khối mã ` ```lua ` hoặc đính kèm file `.lua` / `.txt` (tối đa 2 MB). |
+| `!help` | Hiển thị bảng hướng dẫn. |
+
+Các lệnh có `[on/off]` mặc định là **bật**. Ví dụ: `/esp state:OFF`.
 
 ## Khắc phục sự cố
 
 | Vấn đề | Cách xử lý |
 | --- | --- |
 | Không thấy slash command | Mời lại bot với scope `applications.commands`, đợi một phút rồi tải lại Discord bằng `Ctrl + R`. |
-| Bot ngoại tuyến | Xem lỗi trong console. Token sai hoặc đã bị reset sẽ khiến đăng nhập thất bại, hãy dán token mới vào `bot.py`. |
+| Bot ngoại tuyến hoặc console báo token không hợp lệ | Token sai hoặc đã bị reset sẽ khiến đăng nhập thất bại. Hãy dán token mới vào `token.txt` (hoặc `bot.py`). |
+| Console báo `Used disallowed intents` | Trong Developer Portal → **Bot**, bật **Message Content Intent** rồi lưu lại. |
 | `/inject` báo DISCONNECTED | Chạy `bot.py` trước, rồi mới chạy `bridge.lua`. Đảm bảo không có chương trình nào khác dùng cổng `8765` và firewall cho phép kết nối cục bộ. |
 | "Missing Access" hoặc bot không trả lời | Cấp cho bot quyền xem và gửi tin nhắn trong `#debug`. |
 | `WebSocket` là nil trong Roblox | Executor của bạn không hỗ trợ `WebSocket.connect`. Hãy thử executor khác. |
