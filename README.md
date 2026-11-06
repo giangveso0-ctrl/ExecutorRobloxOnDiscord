@@ -1,414 +1,305 @@
+<a id="top"></a>
+
 <div align="center">
 
 # ⚡ ExecutorOnDiscord
 
-### Control a Roblox client from Discord.
-Slash commands, a button panel inside Discord, and a desktop control window.
+**Control your Roblox client from Discord — slash commands, buttons and a live control panel.**
+**Điều khiển Roblox từ Discord — slash command, nút bấm và bảng điều khiển.**
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![discord.py](https://img.shields.io/badge/discord.py-2.x-5865F2?logo=discord&logoColor=white)
-![WebSocket](https://img.shields.io/badge/WebSocket-localhost%3A8765-2ECC71)
-![Status](https://img.shields.io/badge/status-test%20project-orange)
+![Platform](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 
 **English** · [Tiếng Việt](#-tiếng-việt)
 
 </div>
 
-> **Credits:** Made by **Videccode**, idea from **@vaehz**. If you share or modify this project, please keep these credits.
-
-> **⚠️ Disclaimer:** For testing and learning only. Running scripts through third-party executors can break the [Roblox Terms of Use](https://en.help.roblox.com/hc/en-us/articles/115004647846) and can get your account banned. Use it on your own account, in your own experiences or private test places, at your own risk. Never use it to disrupt other players.
-
----
-
-## Contents
-
-- [Overview](#overview)
-- [Quick start](#quick-start)
-- [Detailed setup](#detailed-setup)
-- [Desktop control panel](#desktop-control-panel-guipy)
-- [Discord button panel](#discord-button-panel-uipy)
-- [Commands](#commands)
-- [Configuration](#configuration)
-- [Security](#security)
-- [Troubleshooting](#troubleshooting)
-- [Project files](#project-files)
+> **Credits:** made by **Videccode**, idea from **@vaehz**. Please keep the credits if you share or modify this project.
+>
+> **Disclaimer:** for testing and learning only. Running scripts through third-party executors can break the [Roblox Terms of Use](https://en.help.roblox.com/hc/en-us/articles/115004647846) and may get your account banned. Use it on your own account and in your own or private test places, at your own risk. Never use it to disrupt other players.
 
 ---
 
-## Overview
+## ✨ Features
+
+| | |
+|---|---|
+| 🎛️ **Control panel** | `/panel` posts a button panel: ESP, Fly, Click-TP, Auto-Heal, FPS Boost. Buttons turn green when a feature is on. |
+| ⚡ **Script runner** | `/exec` opens a large editor box (4,000 chars). `!exec` takes long code blocks or `.lua` / `.txt` files up to 2 MB. **Run again** re-sends the last script. |
+| 📖 **Smart help** | `/help` with a category dropdown. |
+| 📊 **Live status** | `/status` and `/inject` with **Refresh** and **Loadstring** buttons. |
+| 🔒 **Locked down** | Works only in `#debug`, and only for the user IDs you allow — buttons and menus included. |
+
+## 🧩 How it works
 
 ```
- Discord  ──── slash command / button ────▶  bot.py  ◀──── WebSocket ────▶  bridge.lua
- (you)                                              │          ws://localhost:8765   (inside Roblox,
-                                                    │                                 via an executor)
-                                         gui.py ────┘ start · stop · logs
+Discord (#debug) ──commands / buttons──▶ bot.py ◀──WebSocket ws://localhost:8765──▶ bridge.lua (in Roblox)
 ```
 
-1. `bot.py` logs in to Discord and opens a WebSocket server on your own PC.
-2. `bridge.lua` runs inside Roblox through an executor, connects to that server and reconnects on its own if the link drops.
-3. When you use a command in `#debug`, the bot sends Lua over the socket and the bridge runs it in the game.
+`bot.py` logs in to Discord and runs a local WebSocket server. `bridge.lua` runs inside Roblox through your executor, connects to it, and executes whatever Lua the bot sends.
 
-Everything stays on `localhost`. Nothing is exposed to the internet except the normal Discord connection.
+| File | Purpose |
+|------|---------|
+| `bot.py` | Discord bot + WebSocket server |
+| `bridge.lua` | Roblox-side client |
+| `start.bat` | Windows one-click launcher |
+| `requirements.txt` | Python dependencies |
 
-## Quick start
+## 📦 Requirements
 
-> You need Python 3.8+, a Discord bot token and an executor with `WebSocket.connect` support.
+- Windows 10 / 11 (the bot checks for `RobloxPlayerBeta.exe`)
+- [Python 3.8+](https://www.python.org/downloads/) — tick **Add Python to PATH**
+- A Discord server where you can add bots
+- A Roblox executor with `WebSocket.connect` support
+
+## 🚀 Quick start
+
+**1. Install**
 
 ```bash
 git clone https://github.com/giangveso0-ctrl/ExecutorRobloxOnDiscord.git
 cd ExecutorRobloxOnDiscord
+pip install -r requirements.txt
 ```
 
-1. Double-click **`start_gui.bat`**. It installs the dependencies and opens the control panel.
-2. Paste your bot token and press **Start bot**. *(No token yet? See [Step 1](#1-create-the-discord-bot).)*
-3. In Roblox, run this in your executor:
+**2. Create the Discord bot**
 
-   ```lua
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/giangveso0-ctrl/ExecutorRobloxOnDiscord/main/bridge.lua"))()
-   ```
+1. [Developer Portal](https://discord.com/developers/applications) → **New Application** → **Bot** → **Reset Token** → copy it.
+2. Same page → **Privileged Gateway Intents** → enable **Message Content Intent** → save.
+3. **OAuth2 → URL Generator** → scopes `bot` + `applications.commands` → permissions `View Channels`, `Send Messages`, `Embed Links`, `Attach Files`.
+4. Open the generated URL and add the bot to your server.
+5. Create a text channel named **`#debug`**.
 
-4. In `#debug`, type **`/inject`**. When it shows 🟢 **CONNECTED**, you're done.
+> 🔑 The token is a password. Never post it or commit it. If it leaks, reset it.
 
-Prefer a plain console? Use `start.bat` or `python bot.py` instead of step 1–2.
+**3. Allow yourself**
 
-## Detailed setup
-
-### 1. Create the Discord bot
-
-1. Open the [Discord Developer Portal](https://discord.com/developers/applications) and choose **New Application**.
-2. Go to **Bot** → **Reset Token** → **Copy**. Discord shows the token only once.
-3. On the same page, under **Privileged Gateway Intents**, turn **ON** **Message Content Intent** and press **Save Changes**. The `!exec` command needs it, and the bot will not start without it.
-
-### 2. Add the bot to your server
-
-You need the **Manage Server** permission (or be the owner).
-
-1. Go to **OAuth2 → URL Generator**.
-2. **Scopes:** `bot` and `applications.commands`.
-3. **Bot permissions:** `View Channels`, `Send Messages`, `Embed Links`, `Attach Files`.
-4. Open the generated URL, pick your server, then **Authorize**.
-5. Create a text channel named **`#debug`**. Every command works only there. If the channel is private, give the bot's role access to it.
-
-### 3. Install
-
-```bash
-pip install -U discord.py websockets psutil
-```
-
-`start_gui.bat` does this for you.
-
-### 4. Give the bot your token
-
-Pick **one** way. The bot checks them in this order:
-
-| Order | Method | How |
-| --- | --- | --- |
-| 1 | Environment variable | Set `DISCORD_BOT_TOKEN`. The control panel uses this. |
-| 2 | `token.txt` | A file next to `bot.py` containing only the token. |
-| 3 | Edit `bot.py` | Replace `PASTE_YOUR_BOT_TOKEN_HERE` in `DISCORD_BOT_TOKEN`. |
-| 4 | Ask in console | If nothing is found, `bot.py` asks you and can save it to `token.txt`. |
-
-A real token has three parts separated by dots. `token.txt` is added to `.gitignore` automatically.
-
-> **Never commit or post your token.** If it leaks, reset it in the Developer Portal right away.
-
-### 5. Point the bot at your repo (only if you forked it)
-
-In `bot.py`, check these two lines so the loadstring shown by `/inject` matches your copy:
+Enable Discord **Developer Mode** (Settings → Advanced), right-click your name → **Copy User ID**, then in `bot.py`:
 
 ```python
-GITHUB_RAW_SCRIPT = "https://raw.githubusercontent.com/<you>/<repo>/main/bridge.lua"
-REPO_URL = "https://github.com/<you>/<repo>"
+ALLOWED_USER_IDS = [123456789012345678]
 ```
 
-### 6. Run it
+**4. Run the bot**
 
-Start the **bot first**, then run the **bridge** in Roblox. If you close either one, start both again.
+```bash
+python bot.py        # or double-click start.bat
+```
 
-> Loading code from a URL runs whatever is at that URL. Read `bridge.lua` first, or paste its contents into the executor instead.
+Paste the token when asked (it can be saved to `token.txt`, which is git-ignored).
 
----
+**5. Run the bridge in Roblox** (in your executor)
 
-## Desktop control panel (`gui.py`)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/giangveso0-ctrl/ExecutorRobloxOnDiscord/main/bridge.lua"))()
+```
 
-A dark window built on Python's own `tkinter`, so there is nothing extra to install.
+> Loading from a URL runs whatever is there — read `bridge.lua` first, or paste its contents instead.
 
-| Feature | What it does |
-| --- | --- |
-| Status cards | Shows the Discord bot, the Roblox process and how many bridge clients are connected |
-| Start / Stop / Restart | Runs `bot.py` in the background, with no console window |
-| Token box | Show/hide switch. **Save token** writes `token.txt` and updates `.gitignore` |
-| Live console | Coloured output with tips for common errors (wrong token, missing intent) |
-| Shortcuts | **Copy loadstring**, **Dev Portal**, **Folder** |
+**6. Test** — in `#debug` type `/inject`. When it says **CONNECTED**, type `/panel`.
 
-The panel gives the token to `bot.py` through `DISCORD_BOT_TOKEN`, so the bot never needs to prompt. Closing the window stops the bot.
+> ⚠️ Start the bot **before** the bridge. If you close either, start both again.
 
-## Discord button panel (`ui.py`)
+## 🎮 Commands
 
-`/panel` posts one message with buttons. They keep working after the bot restarts.
+All commands work only in `#debug`. Prefix commands accept `!` or `.`.
 
-| Button | Action |
-| --- | --- |
-| 🔄 **Refresh** | Updates the status in place |
-| ⚡ **Run Lua** | Opens a pop-up form for Lua code (up to 4000 characters) |
-| 📋 **Loadstring** | Shows the loadstring to run in your executor |
-| 📖 **Help** | Shows the command list |
-| 🔗 **Repo** | Opens this repository |
-
-Buttons follow the same rules as slash commands: only in `#debug`, and only for `ALLOWED_USER_IDS` if you set it.
-
-### Enable it
-
-1. Put `ui.py` in the same folder as `bot.py`.
-2. In `bot.py`, find the section titled **`🚀 KHỞI CHẠY BOT / START`** (just above `def main()`), and paste this **right above it**:
-
-   ```python
-   import types
-   import ui
-
-   ui.install(bot, types.SimpleNamespace(
-       Colour=Colour, REPO_URL=REPO_URL, make_embed=make_embed, error_embed=error_embed,
-       code_block=code_block, loadstring_snippet=loadstring_snippet,
-       strip_code_fence=strip_code_fence, execute_script=execute_script,
-       build_status_embed=build_status_embed, build_help_embed=build_help_embed,
-       in_debug_channel=in_debug_channel, is_allowed_user=is_allowed_user,
-       is_debug_channel=is_debug_channel, wrong_channel_embed=wrong_channel_embed,
-       denied_embed=denied_embed,
-   ))
-   ```
-
-3. Restart the bot and type `/panel` in `#debug`.
-
----
-
-## Commands
-
-All commands work **only in `#debug`**. Slash command replies are private (only you see them), except `/panel`.
-
-### Slash commands
-
-| Command | Description |
-| --- | --- |
-| `/panel` | Button control panel *(needs [`ui.py`](#enable-it))* |
-| `/help` | Shows all commands |
-| `/inject` | Checks Roblox and the WebSocket, and shows the loadstring if the bridge isn't connected |
-| `/status` | Roblox / WebSocket state, latency, uptime and endpoint |
-| `/exec <code>` | Runs a short Lua snippet. Syntax and runtime errors are reported in the Roblox console |
-| `/findscript <source> <keyword>` | Gives a search link on Rscripts or ScriptBlox |
-| `/esp [on/off]` | Player outlines. Covers new players and respawns |
-| `/fly` · `/unfly` | Flight with `WASD` + `Q`/`E` |
-| `/clicktotp [on/off]` | Hold `Ctrl` and click to teleport |
-| `/autoheal [on/off]` | Keeps your health full |
-| `/fpsboost` | Lowers graphics quality for more FPS |
+| Command | What it does |
+|---------|--------------|
+| `/panel` · `!panel` | Button control panel |
+| `/exec [code]` | Run Lua (empty = open the editor box) |
+| `!exec <script>` | Long script or attached `.lua` / `.txt` |
+| `/help` · `!help` | Help with category dropdown |
+| `/inject` | Check Roblox + WebSocket, get the loadstring |
+| `/status` | Roblox / WebSocket state, latency, uptime |
+| `/esp [on/off]` | Player highlights |
+| `/fly` · `/unfly` | Flight (WASD + Q/E) |
+| `/clicktotp [on/off]` | `Ctrl` + click to teleport |
+| `/autoheal [on/off]` | Keep health full |
+| `/fpsboost` | Lower graphics for more FPS |
+| `/findscript <source> <keyword>` | Search link for Rscripts / ScriptBlox |
 | `/cre` | Credits |
 
-`[on/off]` commands default to **on**. Example: `/esp state:OFF`.
+## ⚙️ Configuration
 
-### Prefix commands (`!` or `.`)
+Edit the constants at the top of `bot.py`, or set environment variables:
 
-| Command | Description |
-| --- | --- |
-| `!exec <script>` | For long scripts. Paste a ```` ```lua ```` code block, or attach a `.lua` / `.txt` file (max 2 MB) |
-| `!help` | Shows the help embed |
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `DISCORD_BOT_TOKEN` | — | Bot token (or `token.txt`) |
+| `ALLOWED_USER_IDS` | empty | Comma-separated IDs allowed to use the bot |
+| `DEBUG_CHANNEL` | `debug` | Channel the bot listens in |
+| `WS_PORT` | `8765` | Local WebSocket port (must match `bridge.lua`) |
 
-The bot reacts with ✅ when the script was delivered and ❌ when no Roblox client is connected.
+## 🛡️ Security
 
-## Configuration
+This bot lets people in your channel **run Lua inside your Roblox client**.
 
-Settings at the top of `bot.py`:
+- **Always set `ALLOWED_USER_IDS`** — ideally just your own ID. The bot warns you when it is empty.
+- Keep `#debug` private and only add the bot to servers you control.
+- Never commit `token.txt`.
+- The WebSocket server listens on `localhost` only.
 
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `DEBUG_CHANNEL` | `"debug"` | Name of the only channel where commands work |
-| `WS_HOST` / `WS_PORT` | `localhost` / `8765` | Where the WebSocket server listens. If you change the port, change it in `bridge.lua` too |
-| `ALLOWED_USER_IDS` | `[]` | Discord user IDs allowed to use the bot. Empty means **everyone in `#debug`** |
-| `MAX_FILE_BYTES` | `2 MB` | Size limit for attached `.lua` / `.txt` files |
-| `GITHUB_RAW_SCRIPT` | this repo's `bridge.lua` | Loadstring URL shown by `/inject` and the panel |
-
-To find your user ID: Discord → Settings → Advanced → turn on **Developer Mode**, then right-click your name → **Copy User ID**.
-
-## Security
-
-This bot runs code on your PC and in your game. Keep it private.
-
-- **Set `ALLOWED_USER_IDS`.** With the default empty list, anyone who can type in `#debug` can run Lua in your game. Put your own ID there, for example `ALLOWED_USER_IDS = [123456789012345678]`.
-- **Keep the server private.** Do not invite people you don't trust, and keep `#debug` hidden from them.
-- **Protect the token.** Anyone with it controls your bot. Don't upload `bot.py` with a real token inside, or `token.txt`.
-- **Read before you run.** `loadstring(game:HttpGet(...))()` executes whatever is at the URL. Only use a URL you control or have read.
-- **Local only.** The WebSocket server listens on `localhost`, so other computers cannot connect to it.
-
-## Troubleshooting
+## 🔧 Troubleshooting
 
 | Problem | Fix |
-| --- | --- |
-| Slash commands don't show up | Re-invite the bot with the `applications.commands` scope, wait a minute, then press `Ctrl + R` in Discord |
-| Bot is offline / invalid token | The token is wrong or was reset. Reset it in the portal and paste the new one |
-| `Used disallowed intents` | Developer Portal → **Bot** → enable **Message Content Intent** and save |
-| `/inject` says DISCONNECTED | Start the bot first, then run the bridge. Make sure nothing else uses port `8765` |
-| 🟠 WAITING FOR SCRIPT | Roblox is running but the bridge isn't loaded. Run the loadstring in your executor |
-| "Missing Access" or no reply | Give the bot permission to view and send messages in `#debug` |
-| `/panel` not found | `ui.py` is missing or the hook isn't in `bot.py`. Restart the bot after adding it |
-| Panel buttons say "interaction failed" | The bot was offline. Start it again, or run `/panel` for a fresh message |
-| `WebSocket` is nil in Roblox | Your executor doesn't support `WebSocket.connect`. Try another one |
-| `python` is not recognized | Reinstall Python and tick **Add Python to PATH** |
-| Control panel says "psutil missing" | Run `pip install psutil`. Only the Roblox indicator needs it |
+|---------|-----|
+| Slash commands missing | Re-invite with `applications.commands`, wait a minute, press `Ctrl + R` in Discord. |
+| Invalid token | Reset it in the Developer Portal and paste the new one. |
+| `Used disallowed intents` | Enable **Message Content Intent** in the Developer Portal. |
+| `/inject` says DISCONNECTED | Start the bot first, then the bridge; make sure port `8765` is free. |
+| "Access denied" on buttons | Your ID is not in `ALLOWED_USER_IDS`. |
+| Old panel buttons do nothing | Run `/panel` again. |
+| `WebSocket` is nil | Your executor lacks `WebSocket.connect`; try another. |
+| `python` not recognized | Reinstall Python with **Add Python to PATH**. |
 
-## Project files
+## 🤝 Contributing & License
 
-| File | Description |
-| --- | --- |
-| `bot.py` | The Discord bot: commands, process check, WebSocket server |
-| `bridge.lua` | Client script that runs inside Roblox and executes what the bot sends |
-| `gui.py` | Desktop control panel |
-| `ui.py` | Button panel and Run Lua form for Discord |
-| `start.bat` | Starts the bot in a console |
-| `start_gui.bat` | Installs dependencies and opens the control panel |
-
-## Contributing
-
-Issues and pull requests are welcome. Please keep changes focused.
-
-## License
-
-No license is set yet. Add a `LICENSE` file (for example MIT) so others know how they may use the code.
+Issues and pull requests are welcome — please keep changes focused. No license is set yet; add a `LICENSE` file (e.g. MIT) so others know how they may use the code.
 
 ---
 
 <a id="-tiếng-việt"></a>
 
-## 🇻🇳 Tiếng Việt
+<div align="center">
 
-### Giới thiệu
+# 🇻🇳 Tiếng Việt
 
-**Điều khiển client Roblox từ Discord.** Có slash command, bảng nút bấm ngay trong Discord và cửa sổ điều khiển trên máy tính.
+[English](#top) · **Tiếng Việt**
 
-> **Ghi công:** Do **Videccode** làm, ý tưởng từ **@vaehz**. Nếu chia sẻ hoặc chỉnh sửa, vui lòng giữ lại phần ghi công này.
+</div>
 
-> **⚠️ Lưu ý:** Chỉ dùng để thử nghiệm và học tập. Chạy script qua executor bên thứ ba có thể vi phạm [Điều khoản sử dụng của Roblox](https://en.help.roblox.com/hc/en-us/articles/115004647846) và có thể khiến tài khoản bị khóa. Chỉ dùng trên tài khoản của bạn, trong game của chính bạn hoặc place thử nghiệm riêng, tự chịu rủi ro. Không dùng để làm phiền người chơi khác.
+> **Ghi công:** do **Videccode** làm, ý tưởng từ **@vaehz**. Vui lòng giữ phần ghi công khi chia sẻ hoặc chỉnh sửa.
+>
+> **Lưu ý:** chỉ dùng để thử nghiệm và học tập. Chạy script qua executor bên thứ ba có thể vi phạm [Điều khoản sử dụng của Roblox](https://en.help.roblox.com/hc/en-us/articles/115004647846) và có thể khiến tài khoản bị khóa. Chỉ dùng trên tài khoản của bạn, trong game của chính bạn hoặc place thử nghiệm riêng tư, tự chịu rủi ro. Không dùng để gây ảnh hưởng đến người chơi khác.
 
-### Cách hoạt động
+## ✨ Tính năng
 
-1. `bot.py` đăng nhập Discord và mở WebSocket server ngay trên máy bạn (`ws://localhost:8765`).
-2. `bridge.lua` chạy trong Roblox qua executor, kết nối tới server đó và tự kết nối lại nếu bị ngắt.
-3. Khi bạn gõ lệnh trong `#debug`, bot gửi mã Lua qua socket và bridge sẽ chạy trong game.
+| | |
+|---|---|
+| 🎛️ **Bảng điều khiển** | `/panel` đăng bảng nút: ESP, Fly, Click-TP, Auto-Heal, FPS Boost. Nút chuyển xanh khi tính năng đang bật. |
+| ⚡ **Chạy script** | `/exec` mở ô nhập lớn (4.000 ký tự). `!exec` nhận script dài hoặc file `.lua` / `.txt` tới 2 MB. Nút **Run again** gửi lại script vừa chạy. |
+| 📖 **Trợ giúp** | `/help` có menu chọn mục. |
+| 📊 **Trạng thái** | `/status`, `/inject` có nút **Refresh** và **Loadstring**. |
+| 🔒 **Bảo mật** | Chỉ dùng trong `#debug` và chỉ với ID được phép — gồm cả nút và menu. |
 
-Mọi thứ chỉ chạy trên `localhost`.
+## 🧩 Cách hoạt động
 
-### Bắt đầu nhanh
+```
+Discord (#debug) ──lệnh / nút──▶ bot.py ◀──WebSocket ws://localhost:8765──▶ bridge.lua (trong Roblox)
+```
 
-Cần: Python 3.8+, token bot Discord và executor hỗ trợ `WebSocket.connect`.
+`bot.py` đăng nhập Discord và mở máy chủ WebSocket cục bộ. `bridge.lua` chạy trong Roblox qua executor, kết nối tới đó và chạy mã Lua mà bot gửi.
+
+## 📦 Yêu cầu
+
+- Windows 10 / 11 (bot tìm tiến trình `RobloxPlayerBeta.exe`)
+- [Python 3.8+](https://www.python.org/downloads/) — nhớ tích **Add Python to PATH**
+- Một server Discord mà bạn thêm được bot
+- Executor Roblox hỗ trợ `WebSocket.connect`
+
+## 🚀 Bắt đầu nhanh
+
+**1. Cài đặt**
 
 ```bash
 git clone https://github.com/giangveso0-ctrl/ExecutorRobloxOnDiscord.git
 cd ExecutorRobloxOnDiscord
+pip install -r requirements.txt
 ```
 
-1. Nhấp đúp **`start_gui.bat`**. File này cài thư viện và mở bảng điều khiển.
-2. Dán token rồi nhấn **Start bot**.
-3. Trong Roblox, chạy trong executor:
+**2. Tạo bot Discord**
 
-   ```lua
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/giangveso0-ctrl/ExecutorRobloxOnDiscord/main/bridge.lua"))()
-   ```
+1. [Developer Portal](https://discord.com/developers/applications) → **New Application** → **Bot** → **Reset Token** → sao chép token.
+2. Cùng trang → **Privileged Gateway Intents** → bật **Message Content Intent** → lưu.
+3. **OAuth2 → URL Generator** → scope `bot` + `applications.commands` → quyền `View Channels`, `Send Messages`, `Embed Links`, `Attach Files`.
+4. Mở URL vừa tạo và thêm bot vào server.
+5. Tạo kênh chat tên **`#debug`**.
 
-4. Trong `#debug`, gõ **`/inject`**. Khi thấy 🟢 **CONNECTED** là xong.
+> 🔑 Token như mật khẩu. Không đăng công khai hay commit lên GitHub. Nếu bị lộ, hãy reset.
 
-Muốn dùng console thường? Chạy `start.bat` hoặc `python bot.py`.
+**3. Cho phép bản thân**
 
-### Cài đặt chi tiết
+Bật **Chế độ nhà phát triển** trong Discord (Cài đặt → Nâng cao), chuột phải vào tên bạn → **Sao chép ID người dùng**, rồi điền vào `bot.py`:
 
-**1. Tạo bot.** Vào [Developer Portal](https://discord.com/developers/applications) → **New Application** → **Bot** → **Reset Token** và sao chép (chỉ hiện một lần). Ở mục **Privileged Gateway Intents**, **BẬT** **Message Content Intent** rồi lưu. Không bật thì bot không khởi động được.
+```python
+ALLOWED_USER_IDS = [123456789012345678]
+```
 
-**2. Thêm bot vào server.** Cần quyền **Manage Server**. Vào **OAuth2 → URL Generator**, chọn scope `bot` và `applications.commands`, quyền `View Channels`, `Send Messages`, `Embed Links`, `Attach Files`. Mở link, chọn server, **Authorize**. Tạo kênh văn bản tên **`#debug`**. Mọi lệnh chỉ dùng được ở kênh này.
-
-**3. Cài thư viện.**
+**4. Chạy bot**
 
 ```bash
-pip install -U discord.py websockets psutil
+python bot.py        # hoặc nhấp đúp start.bat
 ```
 
-**4. Đưa token cho bot.** Chọn **một** cách (bot kiểm tra theo thứ tự này):
+Dán token khi được hỏi (có thể lưu vào `token.txt`, file này đã được git bỏ qua).
 
-| Thứ tự | Cách | Thực hiện |
-| --- | --- | --- |
-| 1 | Biến môi trường | Đặt `DISCORD_BOT_TOKEN` (bảng điều khiển dùng cách này) |
-| 2 | `token.txt` | File cạnh `bot.py`, chỉ chứa token |
-| 3 | Sửa `bot.py` | Thay `PASTE_YOUR_BOT_TOKEN_HERE` |
-| 4 | Nhập trong console | Nếu chưa có, `bot.py` sẽ hỏi và có thể lưu vào `token.txt` |
+**5. Chạy bridge trong Roblox** (trong executor)
 
-> **Không bao giờ đăng token lên mạng hoặc GitHub.** Nếu bị lộ, hãy reset ngay.
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/giangveso0-ctrl/ExecutorRobloxOnDiscord/main/bridge.lua"))()
+```
 
-**5. Nếu bạn fork repo,** hãy sửa `GITHUB_RAW_SCRIPT` và `REPO_URL` trong `bot.py` cho khớp.
+> Tải mã từ URL sẽ chạy bất cứ thứ gì có ở đó — hãy đọc `bridge.lua` trước hoặc dán trực tiếp nội dung.
 
-**6. Chạy.** Chạy **bot trước**, sau đó chạy **bridge** trong Roblox. Nếu đóng một trong hai, hãy chạy lại cả hai. Hãy đọc `bridge.lua` trước khi chạy loadstring.
+**6. Kiểm tra** — trong `#debug` gõ `/inject`. Khi báo **CONNECTED**, gõ `/panel`.
 
-### Bảng điều khiển trên máy tính (`gui.py`)
+> ⚠️ Chạy bot **trước**, rồi mới chạy bridge. Nếu đóng một trong hai, hãy chạy lại cả hai.
 
-Cửa sổ nền tối dùng `tkinter` có sẵn của Python:
+## 🎮 Lệnh
 
-- Thẻ trạng thái: bot Discord, tiến trình Roblox, số bridge đang kết nối
-- Nút **Start / Stop / Restart**, chạy bot nền không hiện cửa sổ console
-- Ô token có nút hiện/ẩn; **Save token** lưu vào `token.txt` và cập nhật `.gitignore`
-- Console trực tiếp có màu, kèm gợi ý khi gặp lỗi phổ biến
-- Phím tắt: **Copy loadstring**, **Dev Portal**, **Folder**
+Tất cả lệnh chỉ dùng trong `#debug`. Lệnh tiền tố dùng `!` hoặc `.`.
 
-### Bảng nút bấm trong Discord (`ui.py`)
-
-`/panel` gửi một tin nhắn có nút, vẫn dùng được sau khi bot khởi động lại:
-
-| Nút | Tác dụng |
-| --- | --- |
-| 🔄 Refresh | Cập nhật trạng thái |
-| ⚡ Run Lua | Mở form nhập mã Lua (tối đa 4000 ký tự) |
-| 📋 Loadstring | Hiện loadstring để chạy trong executor |
-| 📖 Help | Danh sách lệnh |
-| 🔗 Repo | Mở kho mã nguồn |
-
-**Cách bật:** đặt `ui.py` cạnh `bot.py`. Trong `bot.py`, tìm mục **`🚀 KHỞI CHẠY BOT / START`** (ngay trên `def main()`), rồi dán **ngay phía trên** đoạn mã ở phần *Enable it* bên trên. Khởi động lại bot và gõ `/panel` trong `#debug`.
-
-### Danh sách lệnh
-
-Chỉ dùng được trong `#debug`.
-
-| Lệnh | Mô tả |
-| --- | --- |
-| `/panel` | Bảng nút bấm (cần `ui.py`) |
-| `/help` | Xem tất cả lệnh |
-| `/inject` | Kiểm tra Roblox và WebSocket, hiện loadstring nếu chưa kết nối |
-| `/status` | Trạng thái, độ trễ, thời gian hoạt động |
-| `/exec <code>` | Chạy đoạn Lua ngắn; lỗi hiện trong console Roblox |
-| `/findscript <nguồn> <từ khóa>` | Link tìm kiếm trên Rscripts / ScriptBlox |
+| Lệnh | Chức năng |
+|------|-----------|
+| `/panel` · `!panel` | Bảng điều khiển bằng nút |
+| `/exec [code]` | Chạy Lua (để trống = mở ô nhập lớn) |
+| `!exec <script>` | Script dài hoặc file `.lua` / `.txt` đính kèm |
+| `/help` · `!help` | Trợ giúp có menu chọn mục |
+| `/inject` | Kiểm tra Roblox + WebSocket, lấy loadstring |
+| `/status` | Trạng thái, độ trễ, thời gian chạy |
 | `/esp [on/off]` | Viền người chơi |
-| `/fly` · `/unfly` | Bay bằng `WASD` + `Q`/`E` |
-| `/clicktotp [on/off]` | Giữ `Ctrl` và click để dịch chuyển |
+| `/fly` · `/unfly` | Bay (WASD + Q/E) |
+| `/clicktotp [on/off]` | `Ctrl` + click để dịch chuyển |
 | `/autoheal [on/off]` | Giữ máu luôn đầy |
 | `/fpsboost` | Giảm đồ họa để tăng FPS |
+| `/findscript <source> <keyword>` | Link tìm kiếm Rscripts / ScriptBlox |
 | `/cre` | Thông tin tác giả |
-| `!exec <script>` | Script dài: khối ```` ```lua ```` hoặc file `.lua` / `.txt` (tối đa 2 MB) |
 
-Lệnh có `[on/off]` mặc định là **bật**, ví dụ `/esp state:OFF`.
+## ⚙️ Cấu hình
 
-### Bảo mật
+Sửa các hằng số đầu `bot.py`, hoặc đặt biến môi trường:
 
-Bot này chạy mã trên máy bạn và trong game của bạn, hãy giữ riêng tư.
+| Biến | Mặc định | Ý nghĩa |
+|------|----------|---------|
+| `DISCORD_BOT_TOKEN` | — | Token bot (hoặc `token.txt`) |
+| `ALLOWED_USER_IDS` | trống | ID được phép dùng bot, cách nhau bằng dấu phẩy |
+| `DEBUG_CHANNEL` | `debug` | Kênh bot lắng nghe |
+| `WS_PORT` | `8765` | Cổng WebSocket cục bộ (phải khớp `bridge.lua`) |
 
-- **Hãy đặt `ALLOWED_USER_IDS`.** Để trống thì bất kỳ ai gõ được trong `#debug` đều chạy được Lua trong game của bạn. Ví dụ: `ALLOWED_USER_IDS = [123456789012345678]`. Lấy ID: Discord → Settings → Advanced → bật **Developer Mode**, chuột phải vào tên bạn → **Copy User ID**.
-- Không mời người lạ vào server và giữ kênh `#debug` ẩn với họ.
-- Không đăng `bot.py` (có token thật) hoặc `token.txt` lên mạng.
-- `loadstring(game:HttpGet(...))()` chạy bất cứ thứ gì ở URL đó; chỉ dùng URL bạn đã đọc hoặc tự quản lý.
-- WebSocket chỉ lắng nghe trên `localhost` nên máy khác không kết nối được.
+## 🛡️ Bảo mật
 
-### Khắc phục sự cố
+Bot này cho phép người trong kênh **chạy mã Lua trong client Roblox của bạn**.
+
+- **Luôn đặt `ALLOWED_USER_IDS`** — tốt nhất chỉ ID của bạn. Bot sẽ cảnh báo nếu để trống.
+- Giữ `#debug` riêng tư và chỉ thêm bot vào server bạn kiểm soát.
+- Không commit `token.txt`.
+- Máy chủ WebSocket chỉ lắng nghe trên `localhost`.
+
+## 🔧 Khắc phục sự cố
 
 | Vấn đề | Cách xử lý |
-| --- | --- |
-| Không thấy slash command | Mời lại bot với scope `applications.commands`, chờ 1 phút, nhấn `Ctrl + R` |
-| Bot ngoại tuyến / token không hợp lệ | Token sai hoặc đã reset. Tạo token mới và dán lại |
-| `Used disallowed intents` | Bật **Message Content Intent** trong Developer Portal |
-| `/inject` báo DISCONNECTED | Chạy bot trước, bridge sau; kiểm tra cổng `8765` |
-| 🟠 WAITING FOR SCRIPT | Roblox đã chạy nhưng chưa nạp bridge. Chạy loadstring trong executor |
-| "Missing Access" hoặc không trả lời | Cấp quyền xem và gửi tin nhắn cho bot trong `#debug` |
-| Không có `/panel` | Thiếu `ui.py` hoặc chưa thêm đoạn mã vào `bot.py`; khởi động lại bot |
-| `WebSocket` là nil | Executor không hỗ trợ `WebSocket.connect`; thử cái khác |
-| Không nhận lệnh `python` | Cài lại Python và tích **Add Python to PATH** |
+|--------|------------|
+| Không thấy slash command | Mời lại bot với `applications.commands`, đợi một phút, nhấn `Ctrl + R` trong Discord. |
+| Token không hợp lệ | Reset trong Developer Portal rồi dán token mới. |
+| `Used disallowed intents` | Bật **Message Content Intent** trong Developer Portal. |
+| `/inject` báo DISCONNECTED | Chạy bot trước, rồi bridge; đảm bảo cổng `8765` còn trống. |
+| Nút báo "Không có quyền" | ID của bạn chưa có trong `ALLOWED_USER_IDS`. |
+| Nút ở panel cũ không phản hồi | Gõ `/panel` lại. |
+| `WebSocket` là nil | Executor không hỗ trợ `WebSocket.connect`; thử cái khác. |
+| Không nhận lệnh `python` | Cài lại Python và tích **Add Python to PATH**. |
+
+## 🤝 Đóng góp & Giấy phép
+
+Hoan nghênh issue và pull request — vui lòng giữ thay đổi tập trung. Chưa có giấy phép; hãy thêm tệp `LICENSE` (ví dụ MIT) để người khác biết cách sử dụng mã nguồn.
